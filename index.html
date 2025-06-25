@@ -44,12 +44,32 @@
       border-radius: 8px;
     }
 
-    @media (max-width: 640px) {
-      .image-container {
-        width:  300px;
-        height: 300px;
-      }
+@media (max-width: 640px) {
+    .frame-option {
+        width: 96px; /* เท่ากับขนาดเริ่มต้น แต่ปรับให้เล็กลงได้ตามต้องการ */
+        height: 96px; /* รักษาอัตราส่วน 1:1 */
+        padding: 8px; /* เท่ากับขนาดเริ่มต้น */
+        display: flex; /* จัดเรียงเนื้อหาภายใน */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        box-sizing: border-box; /* ให้ padding อยู่ภายในขนาดที่กำหนด */
     }
+    .frame-option img {
+        max-width: 64px; /* ป้องกันไม่ให้ภาพใหญ่เกินไป */
+        max-height: 64px; /* รักษาอัตราส่วนภาพ */
+        width: auto; /* ให้ความกว้างปรับตามสัดส่วน */
+        height: auto; /* ให้ความสูงปรับตามสัดส่วน */
+        object-fit: contain; /* แสดงภาพทั้งหมดโดยไม่ให้ถูกครอบตัด */
+        flex-shrink: 0; /* ไม่ให้ภาพย่อเล็กลง */
+    }
+    .frame-option p {
+        font-size: 0.875rem; /* เท่ากับขนาดเริ่มต้น */
+        margin-top: 4px;
+        line-height: 1.1; /* ปรับปรุงบรรทัด */
+        text-align: center; /* จัดข้อความให้อยู่ตรงกลาง */
+    }
+}
 
     /* user-image and frame-image styles for preview */
     .user-image {
