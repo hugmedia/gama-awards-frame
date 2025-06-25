@@ -316,142 +316,26 @@
     <span>กำลังประมวลผล...</span>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Elements
-      const imageUpload = document.getElementById('imageUpload');
-      const uploadBtn = document.getElementById('uploadBtn');
-      const selectedFileName = document.getElementById('selectedFileName');
-      const frameOptions = document.querySelectorAll('.frame-option');
-      const userImagePreview = document.getElementById('userImage'); 
-      const frameImagePreview = document.getElementById('frameImage'); 
-      const placeholderText = document.getElementById('placeholderText');
-      const scaleSlider = document.getElementById('scaleSlider');
-      const xPosSlider = document.getElementById('xPosSlider');
-      const yPosSlider = document.getElementById('yPosSlider');
-      const downloadBtn = document.getElementById('downloadBtn');
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      const previewContainer = document.getElementById('preview');
-
-      // Frame URLs (UPDATED TO LOCAL FILE PATHS - ตรวจสอบให้แน่ใจว่าชื่อไฟล์ตรงกับที่คุณอัปโหลดบน GitHub)
-      const frameUrls = {
-        'MAA': './MASTER MULTILINE Award.png',
-        'MFA': './MASTER FIRM Award.png',
-        'MMA': './MASTER AGENCY Award.png',
-        'IMA': './International Management Award.png',
-        'FLA': './Frontline Leader Awards.png',
-        'ERA': './Excellence Recruitment Award.png',
-        'COE': './Circle of Excellence Award.png'
-      };
-      
-      // State
-      let selectedFrame = null;
-      let userImageLoaded = false; 
-      let frameImageLoaded = false; 
-      
-      // Function to check if both images are loaded for download enablement
-      function checkDownloadAvailability() {
-        downloadBtn.disabled = !(userImageLoaded && selectedFrame && frameImageLoaded);
-      }
-
-      // Trigger file input when the upload button is clicked
-      uploadBtn.addEventListener('click', function() {
-        imageUpload.click();
-      });
-      
-      // Handle file upload
-      imageUpload.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-          const file = this.files[0];
-          selectedFileName.textContent = file.name;
-          
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            userImagePreview.onload = function() {
-              placeholderText.classList.add('hidden');
-              userImagePreview.classList.remove('hidden');
-              userImageLoaded = true;
-              // Reset sliders to default when a new image is loaded
-              scaleSlider.value = 100;
-              xPosSlider.value = 0;
-              yPosSlider.value = 0;
-              updateImagePosition(); // Apply default positions for preview
-              checkDownloadAvailability();
-            };
-            userImagePreview.onerror = function() {
-              alert('เกิดข้อผิดพลาดในการโหลดรูปภาพของคุณ กรุณาลองใหม่');
-              userImageLoaded = false;
-              checkDownloadAvailability();
-            };
-            userImagePreview.src = e.target.result;
-          };
-          reader.readAsDataURL(file);
-        } else {
-          selectedFileName.textContent = ''; 
-          userImagePreview.classList.add('hidden');
-          placeholderText.classList.remove('hidden');
-          userImageLoaded = false;
-          checkDownloadAvailability();
-        }
-      });
-      
-      // Select frame
-      frameOptions.forEach(option => {
-        option.addEventListener('click', function() {
-          const frameId = this.dataset.frame;
-          
-          frameOptions.forEach(opt => opt.classList.remove('selected'));
-          this.classList.add('selected');
-          
-          selectedFrame = frameId;
-          
-          // Load frame image for preview and set frameImageLoaded flag
-          frameImagePreview.onload = function() {
-            frameImagePreview.classList.remove('hidden');
-            frameImageLoaded = true;
-            checkDownloadAvailability();
-          };
-          frameImagePreview.onerror = function() {
-            console.error('Failed to load frame image:', frameUrls[frameId]);
-            alert('เกิดข้อผิดพลาดในการโหลดกรอบรูป กรุณาตรวจสอบว่าไฟล์รูปภาพกรอบอยู่ในโฟลเดอร์เดียวกันกับไฟล์ HTML นี้แล้ว และชื่อไฟล์ตรงกัน');
-            frameImageLoaded = false;
-            checkDownloadAvailability();
-          };
-          frameImagePreview.src = frameUrls[frameId];
-        });
-      });
-      
-      // Update image position and scale for the PREVIEW
-      function updateImagePosition() {
-        if (!userImageLoaded) return; 
-        
-        const scale = scaleSlider.value / 100;
-        const xPos = parseFloat(xPosSlider.value);
-        const yPos = parseFloat(yPosSlider.value);
-        
-        userImagePreview.style.transform = `translate(${xPos}px, ${yPos}px) scale(${scale})`;
-      }
-      
-      // Event listeners for sliders
-      scaleSlider.addEventListener('input', updateImagePosition);
-      xPosSlider.addEventListener('input', updateImagePosition);
-      yPosSlider.addEventListener('input', updateImagePosition);
-      
-      // Download functionality using html2canvas
-      downloadBtn.addEventListener('click', function() {
+  // Download functionality using html2canvas
+      downloadBtn.addEventListener('click', async function() {
         if (!userImageLoaded || !selectedFrame || !frameImageLoaded) {
           alert('โปรดอัปโหลดรูปภาพและเลือกกรอบก่อนดาวน์โหลด');
           return;
         }
 
         loadingOverlay.classList.remove('hidden');
-        
+        document.querySelector('#loadingOverlay p').textContent = 'กำลังเตรียมรูปภาพ...'; // Update loading text
+
         // Use a temporary div to render the full-resolution image
+        // กำหนดขนาดให้ใหญ่ขึ้นเพื่อให้ได้ภาพที่มีคุณภาพสูงสำหรับดาวน์โหลด (เช่น 2000x2000 หรือ 2500x2500)
+        // 1920x1920 คือขนาดที่ดีสำหรับโปรไฟล์ทั่วไป แต่ถ้าอยากได้ใหญ่ขึ้นสำหรับพิมพ์ อาจลอง 2500x2500
+        const outputResolution = 2000; // ลองเปลี่ยนเป็น 2000 หรือ 2500
+        
         const tempRenderDiv = document.createElement('div');
-        tempRenderDiv.style.width = '1920px';
-        tempRenderDiv.style.height = '1920px';
+        tempRenderDiv.style.width = `${outputResolution}px`;
+        tempRenderDiv.style.height = `${outputResolution}px`;
         tempRenderDiv.style.position = 'absolute'; 
-        tempRenderDiv.style.left = '-9999px';
+        tempRenderDiv.style.left = '-9999px'; // ซ่อนออกจากหน้าจอ
         tempRenderDiv.style.top = '-9999px';
         tempRenderDiv.style.overflow = 'hidden'; 
         tempRenderDiv.style.backgroundColor = 'transparent'; 
@@ -461,103 +345,128 @@
         const hiResUserImage = new Image();
         const hiResFrameImage = new Image();
 
+        // **สำคัญ:** ตั้งค่า crossOrigin = 'anonymous'; สำหรับรูปภาพผู้ใช้
+        // แม้ว่าตอนนี้จะใช้ไฟล์ในเครื่อง แต่ถ้าในอนาคตมีรูปจากต่างโดเมน (เช่น CDN) ตัวนี้จะช่วยเรื่อง CORS
+        // และบางครั้ง html2canvas ก็ต้องการมันแม้จะเป็น local file สำหรับบางเบราว์เซอร์
+        hiResUserImage.crossOrigin = 'anonymous'; 
+        hiResFrameImage.crossOrigin = 'anonymous'; // อาจไม่จำเป็นสำหรับกรอบที่อยู่เครื่อง แต่ใส่ไว้เผื่ออนาคต
+
+        // Set src *before* attaching onload/onerror to avoid race conditions
         hiResUserImage.src = userImagePreview.src;
         hiResFrameImage.src = frameImagePreview.src;
 
-        const scaleFactor = 1920 / 600; 
+        // คำนวณ scale factor จากขนาด preview (600px) ไปยังขนาด outputResolution
+        const previewSize = 600;
+        const scaleFactor = outputResolution / previewSize; 
 
         const currentScale = parseFloat(scaleSlider.value) / 100;
         const currentXPos = parseFloat(xPosSlider.value);
         const currentYPos = parseFloat(yPosSlider.value);
 
+        // Apply transformations to high-res image proportionally
+        // ตำแหน่ง (X, Y) และ Scale จะต้องถูกปรับตาม scaleFactor ใหม่
         hiResUserImage.style.transform = `translate(${currentXPos * scaleFactor}px, ${currentYPos * scaleFactor}px) scale(${currentScale})`;
         hiResUserImage.style.transformOrigin = 'center center'; 
         hiResUserImage.style.objectFit = 'cover'; 
-
+        hiResUserImage.style.position = 'absolute'; 
         hiResUserImage.style.width = '100%'; 
         hiResUserImage.style.height = '100%';
         hiResUserImage.style.left = '0';
         hiResUserImage.style.top = '0';
-        hiResUserImage.style.position = 'absolute';
-        hiResUserImage.style.display = 'block'; 
-
+        
+        hiResFrameImage.style.position = 'absolute'; 
         hiResFrameImage.style.width = '100%'; 
         hiResFrameImage.style.height = '100%';
         hiResFrameImage.style.left = '0';
         hiResFrameImage.style.top = '0';
-        hiResFrameImage.style.position = 'absolute';
         hiResFrameImage.style.zIndex = '10'; 
-        hiResFrameImage.style.display = 'block'; 
 
         tempRenderDiv.appendChild(hiResUserImage);
         tempRenderDiv.appendChild(hiResFrameImage);
 
-        // เมื่อใช้ไฟล์ในเครื่อง ไม่จำเป็นต้องตั้งค่า crossOrigin = 'anonymous'; 
-        // เนื่องจากไฟล์อยู่ในโดเมนเดียวกันแล้ว ปัญหา CORS จะหมดไป
-        // hiResFrameImage.crossOrigin = 'anonymous'; 
+        try {
+            document.querySelector('#loadingOverlay p').textContent = 'กำลังโหลดรูปภาพต้นฉบับ...';
+            await Promise.all([
+                new Promise((resolve, reject) => {
+                    if (hiResUserImage.complete && hiResUserImage.naturalWidth > 0) {
+                        console.log('High-res user image already complete.');
+                        resolve();
+                    } else {
+                        hiResUserImage.onload = () => {
+                            console.log('High-res user image loaded.');
+                            resolve();
+                        };
+                        hiResUserImage.onerror = (e) => {
+                            console.error('User image failed to load for high-res render:', e);
+                            reject(new Error('รูปภาพผู้ใช้โหลดไม่สำเร็จ'));
+                        };
+                    }
+                }),
+                new Promise((resolve, reject) => {
+                    if (hiResFrameImage.complete && hiResFrameImage.naturalWidth > 0) {
+                        console.log('High-res frame image already complete.');
+                        resolve();
+                    } else {
+                        hiResFrameImage.onload = () => {
+                            console.log('High-res frame image loaded.');
+                            resolve();
+                        };
+                        hiResFrameImage.onerror = (e) => {
+                            console.error('Frame image failed to load for high-res render:', e);
+                            reject(new Error('รูปภาพกรอบโหลดไม่สำเร็จ'));
+                        };
+                    }
+                })
+            ]);
+            console.log('High-res images loaded in temp div.');
 
-        // Wait for images to load in the temporary div
-        Promise.all([
-            new Promise(resolve => {
-                if (hiResUserImage.complete) {
-                    resolve();
-                } else {
-                    hiResUserImage.onload = resolve;
-                    hiResUserImage.onerror = () => {
-                        console.error('High-res user image load error. This might cause issues.');
-                        resolve(); 
-                    };
-                }
-            }),
-            new Promise(resolve => {
-                if (hiResFrameImage.complete) {
-                    resolve();
-                } else {
-                    hiResFrameImage.onload = resolve;
-                    hiResFrameImage.onerror = () => {
-                        console.error('High-res frame image load error. Make sure local frame files exist.');
-                        resolve(); 
-                    };
-                }
-            })
-        ]).then(() => {
-            html2canvas(tempRenderDiv, {
-                width: 1920,
-                height: 1920,
-                scale: 1, 
-                backgroundColor: null,
-                useCORS: false, // ไม่ต้องใช้ CORS แล้วเมื่อเป็น local files
-                allowTaint: false, // ไม่ต้อง allow Taint แล้วเมื่อไม่มี CORS issue
+            document.querySelector('#loadingOverlay p').textContent = 'กำลังสร้างรูปภาพสุดท้าย...';
+            const canvas = await html2canvas(tempRenderDiv, {
+                width: outputResolution,
+                height: outputResolution,
+                scale: 1, // สำคัญ: กำหนด scale เป็น 1 เพื่อให้ html2canvas ใช้ resolution ที่เรากำหนดไว้
+                backgroundColor: null, 
+                useCORS: true, // ตั้งเป็น true เพื่อให้ html2canvas จัดการ CORS ให้
+                allowTaint: true, // ตั้งเป็น true เพื่ออนุญาตให้รูปภาพที่มี CORS issues ถูก render ได้ (แต่จะไม่สามารถอ่าน pixel ได้)
                 logging: true,
-                imageTimeout: 15000 
-            }).then(canvas => {
-                document.body.removeChild(tempRenderDiv);
-                
-                try {
-                    const link = document.createElement('a');
-                    link.download = `profile-${selectedFrame}-gama-awards.png`;
-                    link.href = canvas.toDataURL('image/png'); 
-                    link.click();
-                } catch (e) {
-                    console.error('Error creating data URL or download link:', e);
-                    alert('ไม่สามารถดาวน์โหลดรูปภาพได้ (อาจเกิดจากปัญหาภายในหรือรูปภาพต้นฉบับเสียหาย)');
+                imageTimeout: 20000, // เพิ่ม timeout เผื่อเน็ตช้า (20 วินาที)
+                // เพิ่มการปรับปรุงคุณภาพการ render
+                dpi: window.devicePixelRatio * 2, // เพิ่ม DPI สำหรับหน้าจอละเอียด
+                letterRendering: true, // ปรับปรุงการ render ข้อความ
+                // Remove the hidden tempRenderDiv after capture
+                onclone: (document) => {
+                    document.body.removeChild(tempRenderDiv); // This might cause issues, better remove after .then
                 }
-                
-                loadingOverlay.classList.add('hidden');
-            }).catch(err => {
-                console.error('Error generating image with html2canvas:', err);
-                alert('เกิดข้อผิดพลาดในการสร้างรูปภาพ กรุณาลองใหม่อีกครั้ง');
-                document.body.removeChild(tempRenderDiv); 
-                loadingOverlay.classList.add('hidden');
             });
-        }).catch(err => {
-            console.error('Error waiting for high-res images to load:', err);
-            alert('เกิดข้อผิดพลาดในการเตรียมรูปภาพเพื่อดาวน์โหลด กรุณาลองใหม่อีกครั้ง');
-            document.body.removeChild(tempRenderDiv);
+            
+            // ลบ tempRenderDiv หลังจาก html2canvas ทำงานเสร็จ
+            if (document.body.contains(tempRenderDiv)) {
+                document.body.removeChild(tempRenderDiv); 
+            }
+            console.log('html2canvas rendering complete.');
+
+            try {
+                const link = document.createElement('a');
+                link.download = `profile-${selectedFrame}-gama-awards.png`;
+                // ใช้ canvas.toDataURL โดยระบุ quality ให้เหมาะสม (เช่น 0.9 หรือ 1.0)
+                link.href = canvas.toDataURL('image/png', 0.9); 
+                document.body.appendChild(link); 
+                link.click();
+                document.body.removeChild(link); 
+                console.log('Image download initiated successfully.');
+            } catch (e) {
+                console.error('Error creating data URL or download link:', e);
+                alert('ไม่สามารถดาวน์โหลดรูปภาพได้ (อาจเกิดจากปัญหาภายในหรือรูปภาพต้นฉบับเสียหาย)');
+            }
+            
+        } catch (err) {
+            console.error('Error during high-res image loading or html2canvas rendering:', err);
+            alert(`เกิดข้อผิดพลาดในการสร้างรูปภาพ: ${err.message || 'กรุณาลองใหม่อีกครั้ง'}\n(หากเกิดบ่อย ลองเลือกรูปภาพที่มีขนาดเล็กลง)`);
+            if (document.body.contains(tempRenderDiv)) {
+                document.body.removeChild(tempRenderDiv); // Clean up temp div on error
+            }
+        } finally {
             loadingOverlay.classList.add('hidden');
-        });
+            document.querySelector('#loadingOverlay p').textContent = 'กำลังประมวลผล...'; // Reset loading text
+        }
       });
-    });
-  </script>
-</body>
-</html>
