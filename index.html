@@ -350,7 +350,7 @@
       const loadingOverlay = document.getElementById('loadingOverlay');
       const previewContainer = document.getElementById('preview');
 
-      // Frame URLs (UPDATED TO LOCAL FILE PATHS - ตรวจสอบให้แน่ใจว่าชื่อไฟล์ตรงกับที่คุณอัปโหลดบน GitHub)
+      // Frame URLs (UPDATED TO LOCAL FILE PATHS - YOU MUST DOWNLOAD THESE FILES AND PLACE THEM IN THE SAME FOLDER AS THIS HTML FILE)
       const frameUrls = {
         'MAA': './MASTER MULTILINE Award.png',
         'MFA': './MASTER FIRM Award.png',
@@ -430,7 +430,7 @@
           };
           frameImagePreview.onerror = function() {
             console.error('Failed to load frame image:', frameUrls[frameId]);
-            alert('เกิดข้อผิดพลาดในการโหลดกรอบรูป กรุณาตรวจสอบว่าไฟล์รูปภาพกรอบอยู่ในโฟลเดอร์เดียวกันกับไฟล์ HTML นี้แล้ว และชื่อไฟล์ตรงกัน');
+            alert('เกิดข้อผิดพลาดในการโหลดกรอบรูป กรุณาตรวจสอบว่าไฟล์รูปภาพกรอบอยู่ในโฟลเดอร์เดียวกันกับไฟล์ HTML นี้แล้ว');
             frameImageLoaded = false;
             checkDownloadAvailability();
           };
@@ -509,9 +509,9 @@
         tempRenderDiv.appendChild(hiResUserImage);
         tempRenderDiv.appendChild(hiResFrameImage);
 
-        // เมื่อใช้ไฟล์ในเครื่อง ไม่จำเป็นต้องตั้งค่า crossOrigin = 'anonymous'; 
+        // **สำคัญ**: เมื่อใช้ไฟล์ในเครื่อง ไม่จำเป็นต้องตั้งค่า crossOrigin = 'anonymous'; 
         // เนื่องจากไฟล์อยู่ในโดเมนเดียวกันแล้ว ปัญหา CORS จะหมดไป
-        // hiResFrameImage.crossOrigin = 'anonymous'; 
+        // hiResFrameImage.crossOrigin = 'anonymous'; // ไม่ต้องใช้บรรทัดนี้แล้วถ้าใช้ local files!
 
         // Wait for images to load in the temporary div
         Promise.all([
