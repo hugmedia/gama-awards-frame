@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบใส่กรอบรูปภาพ GAMA Awards</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script> 
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: white;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .frame-option {
+      transition: all 0.3s ease;
+      cursor: pointer;
+      background-color: white;
+      border: 1px solid #e5e7eb;
+    }
+
+    .frame-option:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .frame-option.selected {
+      border: 3px solid #4500b2;
+      transform: translateY(-5px);
+    }
+
+    .image-container {
+      position: relative;
+      width: 600px; /* Base size for preview */
+      height: 600px;
+      overflow: hidden;
+      margin: 0 auto;
+      background-color: #f9fafb;
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+    }
+
+    @media (max-width: 640px) {
+      .image-container {
+        width: 100%;
+        height: 300px;
+      }
+    }
+
+    /* user-image and frame-image styles for preview */
+    .user-image {
+      position: absolute;
+      transform-origin: center;
+      width: 100%; 
+      height: 100%;
+      object-fit: cover; /* This makes the image cover the area, cropping as needed */
+      left: 0;
+      top: 0;
+      /* Initial transform will be applied via JS */
+    }
+
+    .frame-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none; /* Allows clicks to pass through */
+      z-index: 10; /* Ensures frame is on top of user image */
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      background: #e5e7eb;
+      outline: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #4500b2;
+      cursor: pointer;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #4500b2;
+      cursor: pointer;
+    }
+
+    .btn {
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      color: white;
+      font-size: 24px;
+    }
+
+    .spinner {
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 5px solid white;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .file-upload {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-upload input[type=file] {
+      position: absolute;
+      top: 0;
+      right: 0;
+      min-width: 100%;
+      min-height: 100%;
+      font-size: 100px;
+      text-align: right;
+      filter: alpha(opacity=0);
+      opacity: 0;
+      outline: none;
+      cursor: pointer;
+      display: block;
+    }
+
+    .header-gradient {
+      background: linear-gradient(to right, #4500b2, #d83361);
+      height: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="header-gradient"></div>
+  <div class="container mx-auto px-4 py-8">
+    <div class="flex justify-center mb-6">
+      <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/logo-gama-awards.png" alt="GAMA Awards Logo" class="h-24">
+    </div>
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">ระบบใส่กรอบรูปภาพ</h1>
+    <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">เปลี่ยนรูปโปรไฟล์ของคุณให้โดดเด่นด้วยกรอบรูปภาพพิเศษจาก GAMA Awards อัพโหลดรูปภาพของคุณ เลือกกรอบที่ชอบ และดาวน์โหลดเพื่อใช้เป็นรูปโปรไฟล์ใหม่ของคุณ</p>
+    
+    <div class="mb-8 max-w-xl mx-auto">
+      <div class="card p-6">
+        <label class="block text-lg font-medium mb-3 text-gray-700">อัพโหลดรูปโปรไฟล์ของคุณ:</label>
+        <div class="file-upload">
+          <button id="uploadBtn" class="w-full bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 0 003 3h10a3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
+            </svg>
+            เลือกรูปภาพจากเครื่อง
+          </button>
+          <input type="file" id="imageUpload" accept="image/*">
+        </div>
+        <p id="selectedFileName" class="mt-2 text-center text-sm text-gray-500"></p>
+      </div>
+    </div>
+    
+    <div class="mb-8">
+      <h2 class="text-xl font-medium mb-4 text-center text-gray-700">เลือกกรอบรูปภาพ</h2>
+      <div class="flex flex-wrap justify-center gap-3">
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="MAA">
+          <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/MASTER-MULTILINE-Award.png" alt="MAA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">MAA</p>
+        </div>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="MFA">
+          <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/MASTER-FIRM-Award.png" alt="MFA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1  text-gray-800">MFA</p>
+        </div>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="MMA">
+          <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/MASTER-AGENCY-Award.png" alt="MMA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">MMA</p>
+        </div>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="IMA">
+          <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/International-Management-Award.png" alt="IMA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">IMA</p>
+        </div>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="FLA">
+          <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/Frontline-Leader-Awards.png" alt="FLA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">FLA</p>
+        </div>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="ERA">
+          <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/Excellence-Recruitment-Award.png" alt="ERA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">ERA</p>
+        </div>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="COE">
+          <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/Circle-of-Excellence-Award.png" alt="COE" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">COE</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="lg:col-span-2">
+        <div class="card p-4">
+          <div id="preview" class="image-container flex items-center justify-center">
+            <div id="placeholderText" class="text-center p-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p class="text-gray-500">โปรดอัพโหลดรูปภาพและเลือกกรอบ</p>
+            </div>
+            <img id="userImage" class="user-image hidden" src="" alt="User uploaded image">
+            <img id="frameImage" class="frame-image hidden" src="" alt="Selected frame">
+          </div>
+        </div>
+      </div>
+      
+      <div class="card p-6">
+        <h3 class="text-lg font-medium mb-4 text-gray-700">ปรับแต่งรูปภาพ</h3>
+        
+        <div class="mb-4">
+          <label for="scaleSlider" class="block text-sm font-medium mb-1 text-gray-600">ขนาด:</label>
+          <input type="range" id="scaleSlider" class="slider w-full" min="50" max="200" value="100">
+          <div class="flex justify-between text-xs text-gray-500">
+            <span>เล็ก</span>
+            <span>ใหญ่</span>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <label for="xPosSlider" class="block text-sm font-medium mb-1 text-gray-600">ตำแหน่งแนวนอน:</label>
+          <input type="range" id="xPosSlider" class="slider w-full" min="-100" max="100" value="0">
+          <div class="flex justify-between text-xs text-gray-500">
+            <span>ซ้าย</span>
+            <span>ขวา</span>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <label for="yPosSlider" class="block text-sm font-medium mb-1 text-gray-600">ตำแหน่งแนวตั้ง:</label>
+          <input type="range" id="yPosSlider" class="slider w-full" min="-100" max="100" value="0">
+          <div class="flex justify-between text-xs text-gray-500">
+            <span>บน</span>
+            <span>ล่าง</span>
+          </div>
+        </div>
+        
+        <button id="downloadBtn" class="w-full bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn disabled:opacity-50 disabled:cursor-not-allowed mb-3" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 0 003 3h10a3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
+          </svg>
+          ดาวน์โหลดรูปโปรไฟล์
+        </button>
+        
+        <p class="mt-4 text-sm text-gray-500 text-center">ดาวน์โหลดและใช้เป็นรูปโปรไฟล์ของคุณบนโซเชียลมีเดีย</p>
+      </div>
+    </div>
+    
+    <div class="max-w-3xl mx-auto mb-8">
+      <div class="card p-6">
+        <h3 class="text-xl font-medium mb-4 text-center text-gray-700">วิธีใช้รูปโปรไฟล์ GAMA Awards</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="text-center">
+            <div class="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-purple-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 0 003 3h10a3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
+              </svg>
+            </div>
+            <h4 class="font-medium mb-1">1. อัพโหลดรูปภาพ</h4>
+            <p class="text-sm text-gray-600">เลือกรูปโปรไฟล์ที่คุณต้องการใช้</p>
+          </div>
+          <div class="text-center">
+            <div class="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-purple-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <h4 class="font-medium mb-1">2. ปรับแต่งรูปภาพ</h4>
+            <p class="text-sm text-gray-600">เลือกกรอบและปรับตำแหน่งให้สวยงาม</p>
+          </div>
+          <div class="text-center">
+            <div class="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-purple-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <h4 class="font-medium mb-1">3. แชร์บนโซเชียล</h4>
+            <p class="text-sm text-gray-600">อัพเดทรูปโปรไฟล์ของคุณและแชร์ให้เพื่อนๆ เห็น</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="text-center text-sm text-gray-500 mb-8">
+      © GAMA Awards 2025 - ระบบใส่กรอบรูปภาพ
+    </div>
+  </div>
+  
+  <div id="loadingOverlay" class="loading hidden">
+    <div class="spinner"></div>
+    <span>กำลังประมวลผล...</span>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Elements
+      const imageUpload = document.getElementById('imageUpload');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const selectedFileName = document.getElementById('selectedFileName');
+      const frameOptions = document.querySelectorAll('.frame-option');
+      const userImagePreview = document.getElementById('userImage'); // Image tag for preview
+      const frameImagePreview = document.getElementById('frameImage'); // Frame tag for preview
+      const placeholderText = document.getElementById('placeholderText');
+      const scaleSlider = document.getElementById('scaleSlider');
+      const xPosSlider = document.getElementById('xPosSlider');
+      const yPosSlider = document.getElementById('yPosSlider');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      const previewContainer = document.getElementById('preview'); // The div containing both images
+
+      // Frame URLs
+      const frameUrls = {
+        'MAA': 'https://hugmediacreation.com/wp-content/uploads/2025/06/MASTER-MULTILINE-Award.png',
+        'MFA': 'https://hugmediacreation.com/wp-content/uploads/2025/06/MASTER-FIRM-Award.png',
+        'MMA': 'https://hugmediacreation.com/wp-content/uploads/2025/06/MASTER-AGENCY-Award.png',
+        'IMA': 'https://hugmediacreation.com/wp-content/uploads/2025/06/International-Management-Award.png',
+        'FLA': 'https://hugmediacreation.com/wp-content/uploads/2025/06/Frontline-Leader-Awards.png',
+        'ERA': 'https://hugmediacreation.com/wp-content/uploads/2025/06/Excellence-Recruitment-Award.png',
+        'COE': 'https://hugmediacreation.com/wp-content/uploads/2025/06/Circle-of-Excellence-Award.png'
+      };
+      
+      // State
+      let selectedFrame = null;
+      let imageLoaded = false;
+      let frameLoaded = false; // Track if the frame image is loaded
+      
+      // Function to check if both images are loaded for download enablement
+      function checkDownloadAvailability() {
+        downloadBtn.disabled = !(imageLoaded && selectedFrame && frameLoaded);
+      }
+
+      // Trigger file input when the upload button is clicked
+      uploadBtn.addEventListener('click', function() {
+        imageUpload.click();
+      });
+      
+      // Handle file upload
+      imageUpload.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+          const file = this.files[0];
+          selectedFileName.textContent = file.name;
+          
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            userImagePreview.onload = function() {
+              placeholderText.classList.add('hidden');
+              userImagePreview.classList.remove('hidden');
+              imageLoaded = true;
+              // Reset sliders to default when a new image is loaded
+              scaleSlider.value = 100;
+              xPosSlider.value = 0;
+              yPosSlider.value = 0;
+              updateImagePosition(); // Apply default positions for preview
+              checkDownloadAvailability();
+            };
+            userImagePreview.onerror = function() {
+              alert('เกิดข้อผิดพลาดในการโหลดรูปภาพของคุณ กรุณาลองใหม่');
+              imageLoaded = false;
+              checkDownloadAvailability();
+            };
+            userImagePreview.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          selectedFileName.textContent = ''; // Clear file name if no file selected
+          userImagePreview.classList.add('hidden');
+          placeholderText.classList.remove('hidden');
+          imageLoaded = false;
+          checkDownloadAvailability();
+        }
+      });
+      
+      // Select frame
+      frameOptions.forEach(option => {
+        option.addEventListener('click', function() {
+          const frameId = this.dataset.frame;
+          
+          frameOptions.forEach(opt => opt.classList.remove('selected'));
+          this.classList.add('selected');
+          
+          selectedFrame = frameId;
+          
+          // Load frame image for preview and set frameLoaded flag
+          frameImagePreview.onload = function() {
+            frameImagePreview.classList.remove('hidden');
+            frameLoaded = true;
+            checkDownloadAvailability();
+          };
+          frameImagePreview.onerror = function() {
+            alert('เกิดข้อผิดพลาดในการโหลดกรอบรูป กรุณาลองใหม่');
+            frameLoaded = false;
+            checkDownloadAvailability();
+          };
+          frameImagePreview.src = frameUrls[frameId];
+        });
+      });
+      
+      // Update image position and scale for the PREVIEW
+      function updateImagePosition() {
+        if (!imageLoaded) return;
+        
+        const scale = scaleSlider.value / 100;
+        const xPos = parseFloat(xPosSlider.value);
+        const yPos = parseFloat(yPosSlider.value);
+        
+        // Apply transform directly to the user image in the preview
+        userImagePreview.style.transform = `translate(${xPos}px, ${yPos}px) scale(${scale})`;
+      }
+      
+      // Event listeners for sliders
+      scaleSlider.addEventListener('input', updateImagePosition);
+      xPosSlider.addEventListener('input', updateImagePosition);
+      yPosSlider.addEventListener('input', updateImagePosition);
+      
+      // Download functionality using html2canvas
+      downloadBtn.addEventListener('click', function() {
+        if (!imageLoaded || !selectedFrame || !frameLoaded) {
+          alert('โปรดอัปโหลดรูปภาพและเลือกกรอบก่อนดาวน์โหลด');
+          return;
+        }
+
+        loadingOverlay.classList.remove('hidden');
+        
+        // Use a temporary div to render the full-resolution image
+        const tempRenderDiv = document.createElement('div');
+        tempRenderDiv.style.width = '1920px';
+        tempRenderDiv.style.height = '1920px';
+        tempRenderDiv.style.position = 'absolute'; // Use absolute to place it off-screen
+        tempRenderDiv.style.left = '-9999px';
+        tempRenderDiv.style.top = '-9999px';
+        tempRenderDiv.style.overflow = 'hidden'; // Important for cropping
+        tempRenderDiv.style.backgroundColor = 'transparent'; // Ensure transparency if needed
+        document.body.appendChild(tempRenderDiv);
+
+        // Clone the current preview state to the temporary div
+        // Ensure that the cloned elements retain the computed styles (transform)
+        const clonedUserImage = userImagePreview.cloneNode(true);
+        const clonedFrameImage = frameImagePreview.cloneNode(true);
+
+        // Apply high-res specific styles for the cloned elements if necessary
+        // The scale factor from 600px to 1920px is 1920/600 = 3.2
+        const scaleFactor = 1920 / 600;
+
+        // Apply current transform values to the cloned user image, scaled for 1920x1920
+        const currentScale = parseFloat(scaleSlider.value) / 100;
+        const currentXPos = parseFloat(xPosSlider.value);
+        const currentYPos = parseFloat(yPosSlider.value);
+
+        // These adjustments need to be multiplied by the scaleFactor
+        clonedUserImage.style.transform = `translate(${currentXPos * scaleFactor}px, ${currentYPos * scaleFactor}px) scale(${currentScale})`;
+        clonedUserImage.style.transformOrigin = 'center center'; // Ensure origin is correct
+
+        // Ensure cloned images are visible and positioned correctly in temp div
+        clonedUserImage.style.width = '100%'; // Relative to tempRenderDiv
+        clonedUserImage.style.height = '100%';
+        clonedUserImage.style.left = '0';
+        clonedUserImage.style.top = '0';
+        clonedUserImage.style.position = 'absolute';
+        clonedUserImage.style.objectFit = 'cover'; // Maintain object-fit property
+        clonedUserImage.style.display = 'block'; // Ensure it's not hidden
+
+        clonedFrameImage.style.width = '100%'; // Relative to tempRenderDiv
+        clonedFrameImage.style.height = '100%';
+        clonedFrameImage.style.left = '0';
+        clonedFrameImage.style.top = '0';
+        clonedFrameImage.style.position = 'absolute';
+        clonedFrameImage.style.zIndex = '10'; // Ensure frame is on top
+        clonedFrameImage.style.display = 'block'; // Ensure it's not hidden
+
+        tempRenderDiv.appendChild(clonedUserImage);
+        tempRenderDiv.appendChild(clonedFrameImage);
+
+        // Wait for images to render in the off-screen div (small delay helps html2canvas)
+        // Also ensure images are fully loaded within the tempRenderDiv context
+        Promise.all([
+            new Promise(resolve => {
+                if (clonedUserImage.complete) resolve();
+                else clonedUserImage.onload = resolve;
+                clonedUserImage.onerror = () => { console.error('Cloned user image load error'); resolve(); };
+            }),
+            new Promise(resolve => {
+                if (clonedFrameImage.complete) resolve();
+                else clonedFrameImage.onload = resolve;
+                clonedFrameImage.onerror = () => { console.error('Cloned frame image load error'); resolve(); };
+            })
+        ]).then(() => {
+            html2canvas(tempRenderDiv, {
+                width: 1920,
+                height: 1920,
+                scale: 1, // We are rendering at the target size (1920x1920), so scale is 1
+                backgroundColor: null,
+                useCORS: true, // Enable CORS support for images from other domains
+                allowTaint: true, // Allow tainting the canvas if CORS is an issue (will prevent pixel access)
+                logging: false, // Turn off excessive logging
+                imageTimeout: 15000 // Increase timeout for images
+            }).then(canvas => {
+                // Remove the temporary div
+                document.body.removeChild(tempRenderDiv);
+                
+                // Create download link
+                const link = document.createElement('a');
+                link.download = `profile-${selectedFrame}-gama-awards.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                loadingOverlay.classList.add('hidden')ห;
+            }).catch(err => {
+                console.error('Error generating image:', err);
+                alert('เกิดข้อผิดพลาดในการสร้างรูปภาพ กรุณาลองใหม่อีกครั้ง');
+                document.body.removeChild(tempRenderDiv); // Clean up even on error
+                loadingOverlay.classList.add('hidden');
+            });
+        }).catch(err => {
+            console.error('Error loading cloned images:', err);
+            alert('เกิดข้อผิดพลาดในการเตรียมรูปภาพเพื่อดาวน์โหลด กรุณาลองใหม่อีกครั้ง');
+            document.body.removeChild(tempRenderDiv);
+            loadingOverlay.classList.add('hidden');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
