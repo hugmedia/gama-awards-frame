@@ -21,29 +21,6 @@
       cursor: pointer;
       background-color: white;
       border: 1px solid #e5e7eb;
-      /* Ensure consistent aspect ratio for frame options */
-      width: 96px; /* Tailwind's w-24, adjusted slightly for padding */
-      height: 96px; /* Tailwind's h-24 */
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 8px; /* p-2 */
-      box-sizing: border-box; /* Include padding in the dimensions */
-    }
-
-    .frame-option img {
-      width: 64px; /* Tailwind's w-16 */
-      height: 64px; /* Tailwind's h-16 */
-      object-fit: contain;
-      flex-shrink: 0; /* Prevent image from shrinking */
-    }
-
-    .frame-option p {
-        font-size: 0.875rem; /* Tailwind's text-sm */
-        margin-top: 4px; /* mt-1 */
-        color: #1f2937; /* text-gray-900 or text-gray-800 */
-        line-height: 1; /* Adjust line height for better spacing */
     }
 
     .frame-option:hover {
@@ -67,34 +44,11 @@
       border-radius: 8px;
     }
 
-    @media (max-width: 768px) { /* Changed from 640px to 768px for better tablet support */
+    @media (max-width: 640px) {
       .image-container {
         width: 100%;
-        /* Maintain aspect ratio on smaller screens */
-        padding-top: 100%; /* Makes height equal to width */
-        height: 0; /* Override height to use padding-top */
+        height: 300px;
       }
-      .image-container img {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-      }
-    }
-    @media (max-width: 640px) {
-        .frame-option {
-            width: 80px; /* Smaller for very small screens */
-            height: 80px;
-            padding: 6px;
-        }
-        .frame-option img {
-            width: 48px;
-            height: 48px;
-        }
-        .frame-option p {
-            font-size: 0.75rem; /* text-xs */
-        }
     }
 
     /* user-image and frame-image styles for preview */
@@ -167,11 +121,6 @@
       z-index: 1000;
       color: white;
       font-size: 24px;
-      flex-direction: column; /* Center content vertically */
-    }
-    .loading p {
-        font-size: 1rem;
-        margin-top: 10px;
     }
 
     .spinner {
@@ -181,7 +130,7 @@
       width: 40px;
       height: 40px;
       animation: spin 1s linear infinite;
-      margin-right: 0; /* Remove margin-right for column layout */
+      margin-right: 10px;
     }
 
     .card {
@@ -237,7 +186,6 @@
         <label class="block text-lg font-medium mb-3 text-gray-700">อัพโหลดรูปโปรไฟล์ของคุณ:</label>
         <div class="file-upload">
           <button id="uploadBtn" class="w-full bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 0 003 3h10a3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
             </svg>
             เลือกรูปภาพจากเครื่อง
@@ -251,33 +199,33 @@
     <div class="mb-8">
       <h2 class="text-xl font-medium mb-4 text-center text-gray-700">เลือกกรอบรูปภาพ</h2>
       <div class="flex flex-wrap justify-center gap-3">
-        <div class="frame-option rounded-lg text-center" data-frame="MAA">
-          <img src="./MASTER MULTILINE Award.png" alt="MAA">
-          <p>MAA</p>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="MAA">
+          <img src="./MASTER MULTILINE Award.png" alt="MAA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">MAA</p>
         </div>
-        <div class="frame-option rounded-lg text-center" data-frame="MFA">
-          <img src="./MASTER FIRM Award.png" alt="MFA">
-          <p>MFA</p>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="MFA">
+          <img src="./MASTER FIRM Award.png" alt="MFA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1  text-gray-800">MFA</p>
         </div>
-        <div class="frame-option rounded-lg text-center" data-frame="MMA">
-          <img src="./MASTER AGENCY Award.png" alt="MMA">
-          <p>MMA</p>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="MMA">
+          <img src="./MASTER AGENCY Award.png" alt="MMA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">MMA</p>
         </div>
-        <div class="frame-option rounded-lg text-center" data-frame="IMA">
-          <img src="./International Management Award.png" alt="IMA">
-          <p>IMA</p>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="IMA">
+          <img src="./International Management Award.png" alt="IMA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">IMA</p>
         </div>
-        <div class="frame-option rounded-lg text-center" data-frame="FLA">
-          <img src="./Frontline Leader Awards.png" alt="FLA">
-          <p>FLA</p>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="FLA">
+          <img src="./Frontline Leader Awards.png" alt="FLA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">FLA</p>
         </div>
-        <div class="frame-option rounded-lg text-center" data-frame="ERA">
-          <img src="./Excellence Recruitment Award.png" alt="ERA">
-          <p>ERA</p>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="ERA">
+          <img src="./Excellence Recruitment Award.png" alt="ERA" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">ERA</p>
         </div>
-        <div class="frame-option rounded-lg text-center" data-frame="COE">
-          <img src="./Circle of Excellence Award.png" alt="COE">
-          <p>COE</p>
+        <div class="frame-option rounded-lg p-2 text-center" data-frame="COE">
+          <img src="./Circle of Excellence Award.png" alt="COE" class="w-20 h-20 object-contain mx-auto">
+          <p class="text-sm font-medium mt-1 text-gray-800">COE</p>
         </div>
       </div>
     </div>
@@ -329,7 +277,6 @@
         </div>
         
         <button id="downloadBtn" class="w-full bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn disabled:opacity-50 disabled:cursor-not-allowed mb-3" disabled>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 0 003 3h10a3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
           </svg>
           ดาวน์โหลดรูปโปรไฟล์
@@ -346,7 +293,7 @@
   
   <div id="loadingOverlay" class="loading hidden">
     <div class="spinner"></div>
-    <p>กำลังประมวลผล...</p>
+    <span>กำลังประมวลผล...</span>
   </div>
 
   <script>
@@ -366,7 +313,7 @@
       const loadingOverlay = document.getElementById('loadingOverlay');
       const previewContainer = document.getElementById('preview');
 
-      // Frame URLs (Make sure these paths are correct relative to your HTML file)
+      // Frame URLs (UPDATED TO LOCAL FILE PATHS - ตรวจสอบให้แน่ใจว่าชื่อไฟล์ตรงกับที่คุณอัปโหลดบน GitHub)
       const frameUrls = {
         'MAA': './MASTER MULTILINE Award.png',
         'MFA': './MASTER FIRM Award.png',
@@ -385,7 +332,6 @@
       // Function to check if both images are loaded for download enablement
       function checkDownloadAvailability() {
         downloadBtn.disabled = !(userImageLoaded && selectedFrame && frameImageLoaded);
-        console.log(`Download available: ${userImageLoaded && selectedFrame && frameImageLoaded}`);
       }
 
       // Trigger file input when the upload button is clicked
@@ -411,15 +357,11 @@
               yPosSlider.value = 0;
               updateImagePosition(); // Apply default positions for preview
               checkDownloadAvailability();
-              console.log('User image loaded successfully.');
             };
             userImagePreview.onerror = function() {
               alert('เกิดข้อผิดพลาดในการโหลดรูปภาพของคุณ กรุณาลองใหม่');
-              userImagePreview.classList.add('hidden'); // Hide broken image
-              placeholderText.classList.remove('hidden'); // Show placeholder
               userImageLoaded = false;
               checkDownloadAvailability();
-              console.error('Error loading user image.');
             };
             userImagePreview.src = e.target.result;
           };
@@ -430,7 +372,6 @@
           placeholderText.classList.remove('hidden');
           userImageLoaded = false;
           checkDownloadAvailability();
-          console.log('No user image selected.');
         }
       });
       
@@ -449,12 +390,10 @@
             frameImagePreview.classList.remove('hidden');
             frameImageLoaded = true;
             checkDownloadAvailability();
-            console.log(`Frame image ${selectedFrame} loaded successfully.`);
           };
           frameImagePreview.onerror = function() {
             console.error('Failed to load frame image:', frameUrls[frameId]);
             alert('เกิดข้อผิดพลาดในการโหลดกรอบรูป กรุณาตรวจสอบว่าไฟล์รูปภาพกรอบอยู่ในโฟลเดอร์เดียวกันกับไฟล์ HTML นี้แล้ว และชื่อไฟล์ตรงกัน');
-            frameImagePreview.classList.add('hidden'); // Hide broken frame
             frameImageLoaded = false;
             checkDownloadAvailability();
           };
@@ -479,7 +418,7 @@
       yPosSlider.addEventListener('input', updateImagePosition);
       
       // Download functionality using html2canvas
-      downloadBtn.addEventListener('click', async function() {
+      downloadBtn.addEventListener('click', function() {
         if (!userImageLoaded || !selectedFrame || !frameImageLoaded) {
           alert('โปรดอัปโหลดรูปภาพและเลือกกรอบก่อนดาวน์โหลด');
           return;
@@ -502,96 +441,101 @@
         const hiResUserImage = new Image();
         const hiResFrameImage = new Image();
 
-        // Set src *before* attaching onload/onerror to avoid race conditions
         hiResUserImage.src = userImagePreview.src;
         hiResFrameImage.src = frameImagePreview.src;
 
-        const scaleFactor = 1920 / 600; // Original preview size vs. desired output size
+        const scaleFactor = 1920 / 600; 
 
         const currentScale = parseFloat(scaleSlider.value) / 100;
         const currentXPos = parseFloat(xPosSlider.value);
         const currentYPos = parseFloat(yPosSlider.value);
 
-        // Apply transformations to high-res image proportionally
         hiResUserImage.style.transform = `translate(${currentXPos * scaleFactor}px, ${currentYPos * scaleFactor}px) scale(${currentScale})`;
         hiResUserImage.style.transformOrigin = 'center center'; 
         hiResUserImage.style.objectFit = 'cover'; 
-        hiResUserImage.style.position = 'absolute'; // Add position for correct rendering
+
         hiResUserImage.style.width = '100%'; 
         hiResUserImage.style.height = '100%';
         hiResUserImage.style.left = '0';
         hiResUserImage.style.top = '0';
-        
-        hiResFrameImage.style.position = 'absolute'; // Add position for correct rendering
+        hiResUserImage.style.position = 'absolute';
+        hiResUserImage.style.display = 'block'; 
+
         hiResFrameImage.style.width = '100%'; 
         hiResFrameImage.style.height = '100%';
         hiResFrameImage.style.left = '0';
         hiResFrameImage.style.top = '0';
+        hiResFrameImage.style.position = 'absolute';
         hiResFrameImage.style.zIndex = '10'; 
+        hiResFrameImage.style.display = 'block'; 
 
         tempRenderDiv.appendChild(hiResUserImage);
         tempRenderDiv.appendChild(hiResFrameImage);
 
-        try {
-            await Promise.all([
-                new Promise((resolve, reject) => {
-                    if (hiResUserImage.complete && hiResUserImage.naturalWidth > 0) {
-                        resolve();
-                    } else {
-                        hiResUserImage.onload = resolve;
-                        hiResUserImage.onerror = () => reject(new Error('User image failed to load for high-res render.'));
-                    }
-                }),
-                new Promise((resolve, reject) => {
-                    if (hiResFrameImage.complete && hiResFrameImage.naturalWidth > 0) {
-                        resolve();
-                    } else {
-                        hiResFrameImage.onload = resolve;
-                        hiResFrameImage.onerror = () => reject(new Error('Frame image failed to load for high-res render.'));
-                    }
-                })
-            ]);
-            console.log('High-res images loaded in temp div.');
+        // เมื่อใช้ไฟล์ในเครื่อง ไม่จำเป็นต้องตั้งค่า crossOrigin = 'anonymous'; 
+        // เนื่องจากไฟล์อยู่ในโดเมนเดียวกันแล้ว ปัญหา CORS จะหมดไป
+        // hiResFrameImage.crossOrigin = 'anonymous'; 
 
-            const canvas = await html2canvas(tempRenderDiv, {
+        // Wait for images to load in the temporary div
+        Promise.all([
+            new Promise(resolve => {
+                if (hiResUserImage.complete) {
+                    resolve();
+                } else {
+                    hiResUserImage.onload = resolve;
+                    hiResUserImage.onerror = () => {
+                        console.error('High-res user image load error. This might cause issues.');
+                        resolve(); 
+                    };
+                }
+            }),
+            new Promise(resolve => {
+                if (hiResFrameImage.complete) {
+                    resolve();
+                } else {
+                    hiResFrameImage.onload = resolve;
+                    hiResFrameImage.onerror = () => {
+                        console.error('High-res frame image load error. Make sure local frame files exist.');
+                        resolve(); 
+                    };
+                }
+            })
+        ]).then(() => {
+            html2canvas(tempRenderDiv, {
                 width: 1920,
                 height: 1920,
                 scale: 1, 
-                backgroundColor: null, // Ensure transparent background if needed
-                useCORS: false, 
-                allowTaint: false, 
+                backgroundColor: null,
+                useCORS: false, // ไม่ต้องใช้ CORS แล้วเมื่อเป็น local files
+                allowTaint: false, // ไม่ต้อง allow Taint แล้วเมื่อไม่มี CORS issue
                 logging: true,
-                imageTimeout: 15000,
-                // Attempt to improve rendering quality
-                dpi: window.devicePixelRatio * 2, // Increase DPI for better resolution on high-res screens
-                letterRendering: true,
-                useCORS: false // Already false but keep explicit
-            });
-            
-            document.body.removeChild(tempRenderDiv); // Clean up temp div
-
-            try {
-                const link = document.createElement('a');
-                link.download = `profile-${selectedFrame}-gama-awards.png`;
-                link.href = canvas.toDataURL('image/png', 1.0); // Specify quality for PNG (though usually 1.0 is default)
-                document.body.appendChild(link); // Append link to body to ensure it's clickable
-                link.click();
-                document.body.removeChild(link); // Clean up link
-                console.log('Image download initiated.');
-            } catch (e) {
-                console.error('Error creating data URL or download link:', e);
-                alert('ไม่สามารถดาวน์โหลดรูปภาพได้ (อาจเกิดจากปัญหาภายในหรือรูปภาพต้นฉบับเสียหาย)');
-            }
-            
-        } catch (err) {
-            console.error('Error during high-res image loading or html2canvas rendering:', err);
-            alert(`เกิดข้อผิดพลาดในการสร้างรูปภาพ: ${err.message || 'กรุณาลองใหม่อีกครั้ง'}`);
-            if (document.body.contains(tempRenderDiv)) {
+                imageTimeout: 15000 
+            }).then(canvas => {
                 document.body.removeChild(tempRenderDiv);
-            }
-        } finally {
+                
+                try {
+                    const link = document.createElement('a');
+                    link.download = `profile-${selectedFrame}-gama-awards.png`;
+                    link.href = canvas.toDataURL('image/png'); 
+                    link.click();
+                } catch (e) {
+                    console.error('Error creating data URL or download link:', e);
+                    alert('ไม่สามารถดาวน์โหลดรูปภาพได้ (อาจเกิดจากปัญหาภายในหรือรูปภาพต้นฉบับเสียหาย)');
+                }
+                
+                loadingOverlay.classList.add('hidden');
+            }).catch(err => {
+                console.error('Error generating image with html2canvas:', err);
+                alert('เกิดข้อผิดพลาดในการสร้างรูปภาพ กรุณาลองใหม่อีกครั้ง');
+                document.body.removeChild(tempRenderDiv); 
+                loadingOverlay.classList.add('hidden');
+            });
+        }).catch(err => {
+            console.error('Error waiting for high-res images to load:', err);
+            alert('เกิดข้อผิดพลาดในการเตรียมรูปภาพเพื่อดาวน์โหลด กรุณาลองใหม่อีกครั้ง');
+            document.body.removeChild(tempRenderDiv);
             loadingOverlay.classList.add('hidden');
-        }
+        });
       });
     });
   </script>
