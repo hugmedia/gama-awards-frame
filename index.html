@@ -50,7 +50,7 @@
       transform-origin: center;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: cover; /* Ensures image covers the area, potentially cropping */
       left: 0;
       top: 0;
     }
@@ -389,10 +389,14 @@
     const imageModal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
     const closeModalBtn = document.getElementById('closeModalBtn');
-    const downloadModalBtn = document.getElementById('downloadModalBtn'); 
+    const downloadModalBtn = document.getElementById('downloadModalBtn');
 
     let currentImage = null;
     let currentFrameSrc = null;
+
+    // Define a target size for the output image to ensure it's always square.
+    // This value determines the resolution of the final output.
+    const OUTPUT_SIZE = 800; // e.g., 800px by 800px
 
     // Function to update the image transform
     function updateImageTransform() {
@@ -482,71 +486,103 @@
         return;
       }
 
-      console.log('Download button clicked. Starting processing...'); // Debug log
+      console.log('Download button clicked. Starting processing...');
       loadingOverlay.classList.remove('hidden'); // Show loading overlay
 
-      // Ensure the frame image is visible for html2canvas to capture it correctly on the clone
-      // We will hide it on the original DOM, but html2canvas makes a clone first.
-      frameImage.classList.remove('hidden'); 
-      
+      // Temporarily override styles for html2canvas to ensure a specific output size
+      const originalWidth = previewContainer.style.width;
+      const originalHeight = previewContainer.style.height;
+      const originalMaxWidth = previewContainer.style.maxWidth;
+      const originalAspectRatio = previewContainer.style.aspectRatio;
+
+      previewContainer.style.width = `${OUTPUT_SIZE}px`;
+      previewContainer.style.height = `${OUTPUT_SIZE}px`;
+      previewContainer.style.maxWidth = `${OUTPUT_SIZE}px`;
+      previewContainer.style.aspectRatio = '1 / 1';
+      previewContainer.style.position = 'relative'; // Ensure positioning context
+
+      // Ensure userImage and frameImage also respect these temporary dimensions
+      userImage.style.width = '100%';
+      userImage.style.height = '100%';
+      frameImage.style.width = '100%';
+      frameImage.style.height = '100%';
+      frameImage.classList.remove('hidden'); // Ensure frame is visible for capture
+
       // Use a timeout to ensure the DOM updates before html2canvas runs
       setTimeout(() => {
-        console.log('html2canvas started.'); // Debug log
+        console.log('html2canvas started.');
         html2canvas(previewContainer, {
           backgroundColor: null,
           useCORS: true,
-          scale: 2, // Higher scale for better resolution
-          logging: true, // Enable html2canvas logging
-          // This onclone callback is crucial for capturing the DOM state correctly
+          scale: 1, // Capture at 1:1 scale of the *rendered* element, then resize
+          logging: true,
+          width: OUTPUT_SIZE, // Ensure capture width
+          height: OUTPUT_SIZE, // Ensure capture height
           onclone: (clonedDoc) => {
               const clonedFrameImage = clonedDoc.getElementById('frameImage');
               const clonedUserImage = clonedDoc.getElementById('userImage');
+              const clonedPreviewContainer = clonedDoc.getElementById('preview');
+
+              // Apply the same fixed dimensions to the cloned elements
+              clonedPreviewContainer.style.width = `${OUTPUT_SIZE}px`;
+              clonedPreviewContainer.style.height = `${OUTPUT_SIZE}px`;
+              clonedPreviewContainer.style.maxWidth = `${OUTPUT_SIZE}px`;
+              clonedPreviewContainer.style.aspectRatio = '1 / 1';
+              clonedPreviewContainer.style.position = 'relative';
+
               if (clonedFrameImage) {
-                  // Ensure frame image is visible and has its correct src on the cloned document
-                  clonedFrameImage.classList.remove('hidden'); 
+                  clonedFrameImage.classList.remove('hidden');
                   clonedFrameImage.src = frameImage.src; // Ensure src is copied
+                  clonedFrameImage.style.width = '100%';
+                  clonedFrameImage.style.height = '100%';
               }
               if (clonedUserImage) {
-                  // Ensure user image is visible and has its correct transform on the cloned document
                   clonedUserImage.classList.remove('hidden');
                   clonedUserImage.style.transform = userImage.style.transform; // Ensure transform is copied
+                  clonedUserImage.style.width = '100%';
+                  clonedUserImage.style.height = '100%';
               }
-              console.log('html2canvas onclone: DOM cloned with correct image states.'); // Debug log
+              console.log('html2canvas onclone: DOM cloned with corrected image states and dimensions.');
           }
         }).then(canvas => {
-          console.log('html2canvas finished. Canvas generated.'); // Debug log
-          
-          // Re-show the frame image on the original DOM (if it was hidden for some reason)
-          frameImage.classList.remove('hidden'); 
+          console.log('html2canvas finished. Canvas generated.');
+
+          // Restore original styles of previewContainer after capture
+          previewContainer.style.width = originalWidth;
+          previewContainer.style.height = originalHeight;
+          previewContainer.style.maxWidth = originalMaxWidth;
+          previewContainer.style.aspectRatio = originalAspectRatio;
+          // userImage and frameImage styles should revert naturally if their parent's dimensions are restored
 
           const finalCanvas = document.createElement('canvas');
+          // Set final canvas dimensions to desired OUTPUT_SIZE for a perfect square
+          finalCanvas.width = OUTPUT_SIZE;
+          finalCanvas.height = OUTPUT_SIZE;
           const context = finalCanvas.getContext('2d');
-          finalCanvas.width = canvas.width;
-          finalCanvas.height = canvas.height;
 
-          // Draw user image (from the captured canvas)
-          context.drawImage(canvas, 0, 0);
+          // Draw the captured user image (which now includes scaling/positioning from html2canvas)
+          // Ensure it's drawn to fill the square canvas
+          context.drawImage(canvas, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
 
           // Draw the frame image on top
           const frameImg = new Image();
           frameImg.crossOrigin = 'Anonymous';
           frameImg.src = currentFrameSrc;
-          
+
           frameImg.onload = () => {
-            console.log('Frame image loaded onto final canvas.'); // Debug log
-            context.drawImage(frameImg, 0, 0, finalCanvas.width, finalCanvas.height);
+            console.log('Frame image loaded onto final canvas.');
+            // Draw the frame, ensuring it also fills the square canvas
+            context.drawImage(frameImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
 
             const imageDataUrl = finalCanvas.toDataURL('image/png');
 
             if (isMobileDevice()) {
-              console.log('Detected mobile device. Showing modal.'); // Debug log
-              // Show modal with the image for mobile users to long-press
+              console.log('Detected mobile device. Showing modal.');
               modalImage.src = imageDataUrl;
               imageModal.classList.remove('hidden');
               downloadModalBtn.classList.add('hidden'); // Hide desktop download button in modal
             } else {
-              console.log('Detected desktop device. Initiating direct download.'); // Debug log
-              // For desktop, use the traditional download link
+              console.log('Detected desktop device. Initiating direct download.');
               const link = document.createElement('a');
               link.download = 'gama-awards-profile.png';
               link.href = imageDataUrl;
@@ -557,17 +593,21 @@
             loadingOverlay.classList.add('hidden'); // Hide loading overlay
           };
           frameImg.onerror = () => {
-            console.error('Error loading frame image for final canvas:', currentFrameSrc); // Debug log
+            console.error('Error loading frame image for final canvas:', currentFrameSrc);
             alert('ไม่สามารถโหลดกรอบรูปได้ ตรวจสอบชื่อไฟล์หรือพาธของรูปภาพกรอบ');
-            loadingOverlay.classList.add('hidden'); // Hide loading overlay
+            loadingOverlay.classList.add('hidden');
           };
         }).catch(error => {
-          console.error('html2canvas error:', error); // Debug: Catch all errors from html2canvas
+          console.error('html2canvas error:', error);
           alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
-          frameImage.classList.remove('hidden');
+          // Restore original styles even on error
+          previewContainer.style.width = originalWidth;
+          previewContainer.style.height = originalHeight;
+          previewContainer.style.maxWidth = originalMaxWidth;
+          previewContainer.style.aspectRatio = originalAspectRatio;
           loadingOverlay.classList.add('hidden');
         });
-      }, 300); // Increased delay to ensure DOM updates
+      }, 50); // Small delay to allow DOM updates
     });
 
     // Close modal button event
@@ -575,7 +615,7 @@
         imageModal.classList.add('hidden');
     });
 
-    // Optional: Direct download button inside modal for desktop users (if modal is shown to them)
+    // Direct download button inside modal for desktop users (if modal is shown to them)
     // Or if mobile users want to try direct download (less reliable)
     downloadModalBtn.addEventListener('click', () => {
         const imageDataUrl = modalImage.src;
