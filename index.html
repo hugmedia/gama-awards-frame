@@ -37,7 +37,7 @@
       width: 100%;
       max-width: 600px; /* This defines the actual display width for preview */
       aspect-ratio: 1 / 1; /* Ensures it's always a square for display */
-      overflow: hidden; /* This is essential for cropping the preview view */
+      overflow: hidden; /* Essential for cropping the preview view if image is larger */
       margin: 0 auto;
       background-color: #f9fafb;
       border: 2px dashed #d1d5db;
@@ -302,7 +302,7 @@
 
         <div class="mb-4">
           <label for="scaleSlider" class="block text-sm font-medium mb-1 text-gray-600">ขนาด:</label>
-          <input type="range" id="scaleSlider" class="slider w-full" min="1" max="400" value="100">
+          <input type="range" id="scaleSlider" class="slider w-full" min="10" max="400" value="100">
           <div class="flex justify-between text-xs text-gray-500">
             <span>เล็ก</span>
             <span>ใหญ่</span>
@@ -389,52 +389,43 @@
 
     let currentImage = null; // Stores base64 or URL of the uploaded image
     let currentFrameSrc = null; // Stores URL of the selected frame
-    let userImageNaturalWidth = 0;
-    let userImageNaturalHeight = 0;
+    let userImageNaturalWidth = 0; // Natural width of the uploaded image
+    let userImageNaturalHeight = 0; // Natural height of the uploaded image
 
-    // This defines the actual display width for preview in pixels (from CSS max-width)
-    const PREVIEW_CONTAINER_SIZE = 600; 
-
+    // This defines the actual display width for the preview container in pixels (from CSS max-width)
+    // The downloaded image will have this exact resolution.
+    let PREVIEW_AND_DOWNLOAD_SIZE = 600; 
+    
     // Function to calculate and apply image transform for preview
     function applyImageTransform() {
       if (!currentImage || userImageNaturalWidth === 0 || userImageNaturalHeight === 0) return;
 
-      const scale = scaleSlider.value / 100;
-      const xOffsetPercent = xPosSlider.value;
-      const yOffsetPercent = yPosSlider.value;
+      const scale = scaleSlider.value / 100; // Convert slider value to a scale factor
+      const xOffsetPercent = xPosSlider.value; // Percentage offset for X
+      const yOffsetPercent = yPosSlider.value; // Percentage offset for Y
 
-      // 1. Calculate image dimensions based on its natural size and the scale slider
+      // 1. Calculate the scaled dimensions of the user image, preserving aspect ratio
       const scaledWidth = userImageNaturalWidth * scale;
       const scaledHeight = userImageNaturalHeight * scale;
 
-      // 2. Calculate initial position to center the image if it were within the preview container
-      // This is the starting point for applying offsets from sliders
-      const xInitialCenter = (PREVIEW_CONTAINER_SIZE - scaledWidth) / 2;
-      const yInitialCenter = (PREVIEW_CONTAINER_SIZE - scaledHeight) / 2;
+      // 2. Calculate the initial centered position of the scaled image within the PREVIEW_AND_DOWNLOAD_SIZE area
+      // This is the starting point before applying user offsets.
+      const initialX = (PREVIEW_AND_DOWNLOAD_SIZE - scaledWidth) / 2;
+      const initialY = (PREVIEW_AND_DOWNLOAD_SIZE - scaledHeight) / 2;
 
-      // 3. Apply offsets from sliders (as percentage of PREVIEW_CONTAINER_SIZE)
-      // These offsets move the image relative to its initial centered position
-      const offsetX = (xOffsetPercent / 100) * PREVIEW_CONTAINER_SIZE;
-      const offsetY = (yOffsetPercent / 100) * PREVIEW_CONTAINER_SIZE;
+      // 3. Calculate the pixel offsets based on the slider percentages and PREVIEW_AND_DOWNLOAD_SIZE
+      const offsetX = (xOffsetPercent / 100) * PREVIEW_AND_DOWNLOAD_SIZE;
+      const offsetY = (yOffsetPercent / 100) * PREVIEW_AND_DOWNLOAD_SIZE;
 
-      // 4. Calculate final position
-      const finalX = xInitialCenter + offsetX;
-      const finalY = yInitialCenter + offsetY;
+      // 4. Calculate the final absolute position for the user image
+      const finalX = initialX + offsetX;
+      const finalY = initialY + offsetY;
 
-      // Apply styles to the userImage element for preview
+      // Apply these calculated styles directly to the userImage element for preview
       userImage.style.width = `${scaledWidth}px`;
       userImage.style.height = `${scaledHeight}px`;
       userImage.style.left = `${finalX}px`;
       userImage.style.top = `${finalY}px`;
-      
-      // Optional: Log values for debugging
-      console.log('--- Preview Transform Calc ---');
-      console.log(`Original Size: ${userImageNaturalWidth}x${userImageNaturalHeight}`);
-      console.log(`Scale: ${scaleSlider.value}%`);
-      console.log(`Scaled Size: ${scaledWidth}x${scaledHeight}`);
-      console.log(`Offsets (PX): ${offsetX}, ${offsetY}`);
-      console.log(`Final Position (PX): left=${finalX}, top=${finalY}`);
-      console.log('----------------------------');
     }
 
     // Function to check if download button should be enabled
@@ -455,12 +446,17 @@
         reader.onload = (e) => {
           const img = new Image();
           img.onload = () => {
-            userImageNaturalWidth = img.naturalWidth;
+            userImageNaturalWidth = img.naturalWidth; // Get natural dimensions
             userImageNaturalHeight = img.naturalHeight;
-            userImage.src = e.target.result;
-            userImage.classList.remove('hidden');
-            placeholderText.classList.add('hidden');
+            userImage.src = e.target.result; // Set image source
+            userImage.classList.remove('hidden'); // Show the image
+            placeholderText.classList.add('hidden'); // Hide placeholder text
             currentImage = e.target.result; // Store the base64 string
+
+            // Update PREVIEW_AND_DOWNLOAD_SIZE based on the actual rendered size of the preview container
+            // This is crucial to ensure downloaded image matches the preview's actual resolution on screen
+            // We read clientWidth here because the CSS max-width might make it smaller on mobile
+            PREVIEW_AND_DOWNLOAD_SIZE = previewContainer.clientWidth;
             
             // Reset sliders to default values (100% scale, 0 offset)
             scaleSlider.value = 100;
@@ -472,6 +468,7 @@
         };
         reader.readAsDataURL(file);
       } else {
+        // Reset state if no file selected
         userImage.src = '';
         userImage.classList.add('hidden');
         placeholderText.classList.remove('hidden');
@@ -496,7 +493,6 @@
             currentFrameSrc = frameImgElement.src;
             frameImage.src = currentFrameSrc;
             frameImage.classList.remove('hidden');
-            console.log('Frame selected:', currentFrameSrc);
         } else {
             console.error('ไม่พบแท็ก img ภายใน frame-option ที่เลือก');
             currentFrameSrc = null;
@@ -526,15 +522,14 @@
       console.log('Download button clicked. Starting processing...');
       loadingOverlay.classList.remove('hidden');
 
-      // 1. Create a canvas for final output. Its size MUST match the preview container's effective size.
-      // We use PREVIEW_CONTAINER_SIZE for consistency.
+      // Create a canvas for final output. Its size MUST match the preview container's effective size.
       const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = PREVIEW_CONTAINER_SIZE;
-      finalCanvas.height = PREVIEW_CONTAINER_SIZE;
+      finalCanvas.width = PREVIEW_AND_DOWNLOAD_SIZE;
+      finalCanvas.height = PREVIEW_AND_DOWNLOAD_SIZE;
       const context = finalCanvas.getContext('2d');
 
       try {
-        // 2. Load the user's uploaded image (Image object)
+        // 1. Load the user's uploaded image as an Image object
         const userImg = new Image();
         userImg.crossOrigin = 'Anonymous'; // Important for CORS if image is from different origin
         userImg.src = currentImage;
@@ -544,7 +539,7 @@
           userImg.onerror = reject;
         });
 
-        // 3. Calculate user image dimensions and position for the final canvas
+        // 2. Calculate user image dimensions and position for drawing on the canvas
         // This logic is IDENTICAL to applyImageTransform() to ensure 100% match
         const scale = scaleSlider.value / 100;
         const xOffsetPercent = xPosSlider.value;
@@ -553,19 +548,19 @@
         const scaledWidth = userImageNaturalWidth * scale;
         const scaledHeight = userImageNaturalHeight * scale;
 
-        const xInitialCenter = (PREVIEW_CONTAINER_SIZE - scaledWidth) / 2;
-        const yInitialCenter = (PREVIEW_CONTAINER_SIZE - scaledHeight) / 2;
+        const initialX = (PREVIEW_AND_DOWNLOAD_SIZE - scaledWidth) / 2;
+        const initialY = (PREVIEW_AND_DOWNLOAD_SIZE - scaledHeight) / 2;
 
-        const offsetX = (xOffsetPercent / 100) * PREVIEW_CONTAINER_SIZE;
-        const offsetY = (yOffsetPercent / 100) * PREVIEW_CONTAINER_SIZE;
+        const offsetX = (xOffsetPercent / 100) * PREVIEW_AND_DOWNLOAD_SIZE;
+        const offsetY = (yOffsetPercent / 100) * PREVIEW_AND_DOWNLOAD_SIZE;
 
-        const finalXOnCanvas = xInitialCenter + offsetX;
-        const finalYOnCanvas = yInitialCenter + offsetY;
+        const finalXOnCanvas = initialX + offsetX;
+        const finalYOnCanvas = initialY + offsetY;
 
-        // 4. Draw the user's image onto the final canvas
+        // 3. Draw the user's image onto the final canvas
         context.drawImage(userImg, finalXOnCanvas, finalYOnCanvas, scaledWidth, scaledHeight);
 
-        // 5. Load the frame image
+        // 4. Load the frame image
         const frameImg = new Image();
         frameImg.crossOrigin = 'Anonymous'; // Important for CORS
         frameImg.src = currentFrameSrc;
@@ -575,33 +570,34 @@
           frameImg.onerror = reject;
         });
 
-        // 6. Draw the frame image over the user's image on the final canvas
-        context.drawImage(frameImg, 0, 0, PREVIEW_CONTAINER_SIZE, PREVIEW_CONTAINER_SIZE);
+        // 5. Draw the frame image over the user's image on the final canvas
+        // It should cover the entire canvas, so its size is PREVIEW_AND_DOWNLOAD_SIZE
+        context.drawImage(frameImg, 0, 0, PREVIEW_AND_DOWNLOAD_SIZE, PREVIEW_AND_DOWNLOAD_SIZE);
 
         // --- Image combination on Canvas complete ---
 
-        const imageDataUrl = finalCanvas.toDataURL('image/png');
+        const imageDataUrl = finalCanvas.toDataURL('image/png'); // Get image as data URL
 
         if (isMobileDevice()) {
           console.log('Detected mobile device. Showing modal.');
-          modalImage.src = imageDataUrl;
-          imageModal.classList.remove('hidden');
+          modalImage.src = imageDataUrl; // Set modal image source
+          imageModal.classList.remove('hidden'); // Show modal
           downloadModalBtn.classList.add('hidden'); // Hide desktop download button in modal for mobile
         } else {
           console.log('Detected desktop device. Initiating direct download.');
-          const link = document.createElement('a');
-          link.download = 'gama-awards-profile.png';
-          link.href = imageDataUrl;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          const link = document.createElement('a'); // Create a temporary link
+          link.download = 'gama-awards-profile.png'; // Set filename
+          link.href = imageDataUrl; // Set data URL as href
+          document.body.appendChild(link); // Append to body temporarily
+          link.click(); // Programmatically click to trigger download
+          document.body.removeChild(link); // Remove link
         }
 
       } catch (error) {
         console.error('Error during image processing:', error);
         alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง: ' + error.message);
       } finally {
-        loadingOverlay.classList.add('hidden');
+        loadingOverlay.classList.add('hidden'); // Hide loading overlay
       }
     });
 
@@ -611,6 +607,7 @@
     });
 
     // Optional: Direct download button inside modal (if user is on desktop and modal is shown)
+    // This button provides an alternative download method for desktop users in the modal
     downloadModalBtn.addEventListener('click', () => {
         const imageDataUrl = modalImage.src;
         if (imageDataUrl) {
@@ -624,7 +621,7 @@
         imageModal.classList.add('hidden');
     });
 
-    // Initial check for download button state
+    // Initial check for download button state when page loads
     checkDownloadButtonState();
   </script>
 </body>
