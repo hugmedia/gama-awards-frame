@@ -36,8 +36,8 @@
     .image-container {
       position: relative;
       width: 100%;
-      max-width: 600px;
-      aspect-ratio: 1 / 1;
+      max-width: 600px; /* Max width of the preview container */
+      aspect-ratio: 1 / 1; /* Ensures it's always a square for display */
       overflow: hidden;
       margin: 0 auto;
       background-color: #f9fafb;
@@ -48,8 +48,8 @@
     .user-image {
       position: absolute;
       transform-origin: center;
-      width: 100%;
-      height: 100%;
+      width: 100%; /* base width for user image within container */
+      height: 100%; /* base height for user image within container */
       object-fit: cover; /* Ensures image covers the area, potentially cropping */
       left: 0;
       top: 0;
@@ -395,7 +395,7 @@
     let currentFrameSrc = null;
 
     // กำหนดขนาดมาตรฐานสำหรับภาพเอาต์พุต (เพื่อให้แน่ใจว่าเป็นสี่เหลี่ยมจตุรัสเสมอ)
-    // ค่านี้จะกำหนดความละเอียดของภาพสุดท้ายด้วย
+    // ค่านี้จะกำหนดความละเอียดของภาพสุดท้ายด้วย ควรเป็นค่าที่เหมาะสมกับกรอบ
     const OUTPUT_SIZE = 800; // สามารถปรับเปลี่ยนได้ เช่น 1000, 1200 เพื่อความละเอียดสูงขึ้น
 
     // Function to update the image transform
@@ -404,6 +404,7 @@
         const scale = scaleSlider.value / 100;
         const xPos = xPosSlider.value;
         const yPos = yPosSlider.value;
+        // Apply transform directly to the userImage element for preview
         userImage.style.transform = `scale(${scale}) translate(${xPos}%, ${yPos}%)`;
       }
       checkDownloadButtonState();
@@ -507,37 +508,60 @@
         });
 
         // 2. คำนวณ transform เพื่อนำมาใช้กับ Canvas
-        // เราจะเอาค่า scale, xPos, yPos จาก slider มาคำนวณตำแหน่งจริงบน Canvas
-        const scale = scaleSlider.value / 100;
-        const xPosPercent = xPosSlider.value;
-        const yPosPercent = yPosSlider.value;
+        const scaleValue = scaleSlider.value / 100; // ค่า scale จาก slider
+        const xPosPercent = xPosSlider.value; // ค่า offset X เป็น %
+        const yPosPercent = yPosSlider.value; // ค่า offset Y เป็น %
 
-        // คำนวณขนาดภาพผู้ใช้ที่ปรับ scale แล้ว
-        const scaledWidth = userImg.naturalWidth * scale;
-        const scaledHeight = userImg.naturalHeight * scale;
+        // --------------------------------------------------------------------
+        // คำนวณขนาดและตำแหน่งของภาพผู้ใช้บน Canvas อย่างแม่นยำ
+        // เป้าหมายคือให้ "สเกลที่แสดงผลบนหน้าจอ" ถูกนำไปใช้กับ OUTPUT_SIZE
+        // --------------------------------------------------------------------
 
-        // คำนวณ offset จาก slider (ค่า xPos, yPos เป็น % ของความกว้าง/สูงของ previewContainer)
-        // previewContainer ที่จับภาพคือ OUTPUT_SIZE x OUTPUT_SIZE
-        const offsetX = (xPosPercent / 100) * OUTPUT_SIZE;
-        const offsetY = (yPosPercent / 100) * OUTPUT_SIZE;
+        // ขนาดจริงของ previewContainer ที่แสดงผลบนหน้าจอ
+        // เราใช้ clientWidth/clientHeight เพื่อให้ได้ขนาดที่ CSS render ออกมาจริงๆ
+        const previewDisplayWidth = previewContainer.clientWidth;
+        const previewDisplayHeight = previewContainer.clientHeight;
 
-        // ตำแหน่งเริ่มต้นของภาพ (top-left corner) ก่อน transform
-        // เนื่องจาก object-fit: cover; เราต้องคำนวณตำแหน่งเริ่มต้นเพื่อให้ภาพอยู่ตรงกลาง
-        let initialX = (OUTPUT_SIZE - scaledWidth) / 2;
-        let initialY = (OUTPUT_SIZE - scaledHeight) / 2;
+        // คำนวณสเกลของ userImage เมื่อเทียบกับ previewContainer
+        // ถ้า userImage มี object-fit: cover; มันจะถูกปรับให้เต็มพื้นที่ตามกว้างหรือสูง
+        // และจะขยับตาม slider
+        let imgDisplayWidth = previewDisplayWidth;
+        let imgDisplayHeight = previewDisplayHeight;
+        const imgAspectRatio = userImg.naturalWidth / userImg.naturalHeight;
+        const containerAspectRatio = previewDisplayWidth / previewDisplayHeight;
 
-        // รวม offset จาก slider
-        const finalX = initialX + offsetX;
-        const finalY = initialY + offsetY;
+        if (imgAspectRatio > containerAspectRatio) {
+            // ภาพกว้างกว่า container (cover by width)
+            imgDisplayHeight = previewDisplayWidth / imgAspectRatio;
+        } else {
+            // ภาพสูงกว่า container (cover by height)
+            imgDisplayWidth = previewDisplayHeight * imgAspectRatio;
+        }
 
+        // คำนวณขนาดของภาพที่ *ควรจะแสดงผล* ภายใน previewContainer ตาม scale ของ slider
+        const finalImgWidthOnCanvas = imgDisplayWidth * scaleValue * (OUTPUT_SIZE / previewDisplayWidth);
+        const finalImgHeightOnCanvas = imgDisplayHeight * scaleValue * (OUTPUT_SIZE / previewDisplayHeight);
+        
+        // คำนวณตำแหน่งเริ่มต้นของภาพบน previewContainer (ก่อน translate)
+        // เนื่องจาก object-fit: cover; ภาพจะอยู่ตรงกลาง
+        const initialImgXOnCanvas = (OUTPUT_SIZE - finalImgWidthOnCanvas) / 2;
+        const initialImgYOnCanvas = (OUTPUT_SIZE - finalImgHeightOnCanvas) / 2;
+        
+        // คำนวณ offset จาก slider (ค่า xPos, yPos เป็น % ของ previewContainer width/height)
+        const offsetXOnCanvas = (xPosPercent / 100) * OUTPUT_SIZE;
+        const offsetYOnCanvas = (yPosPercent / 100) * OUTPUT_SIZE;
+
+        // ตำแหน่งสุดท้ายบน Canvas
+        const finalXOnCanvas = initialImgXOnCanvas + offsetXOnCanvas;
+        const finalYOnCanvas = initialImgYOnCanvas + offsetYOnCanvas;
+        
         // 3. วาดภาพผู้ใช้ลงบน finalCanvas ด้วยการปรับขนาดและตำแหน่งที่คำนวณเอง
-        // ใช้ drawImage แบบมี 9 พารามิเตอร์ เพื่อควบคุม source และ destination
         context.drawImage(
             userImg,
             0, 0, // Source X, Y (ดึงภาพทั้งหมด)
             userImg.naturalWidth, userImg.naturalHeight, // Source Width, Height (ขนาดจริงของภาพ)
-            finalX, finalY, // Destination X, Y (ตำแหน่งบน Canvas)
-            scaledWidth, scaledHeight // Destination Width, Height (ขนาดบน Canvas)
+            finalXOnCanvas, finalYOnCanvas, // Destination X, Y (ตำแหน่งบน Canvas)
+            finalImgWidthOnCanvas, finalImgHeightOnCanvas // Destination Width, Height (ขนาดบน Canvas)
         );
 
         // 4. โหลดภาพกรอบ (frameImage)
