@@ -158,6 +158,65 @@
       height: 8px;
     }
 
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1100;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background-color: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      max-width: 90%;
+      max-height: 90%;
+      overflow: auto;
+      text-align: center;
+      position: relative;
+      animation: fadeInScale 0.3s ease-out;
+    }
+
+    .modal-content img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      border-radius: 8px;
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #555;
+      padding: 5px;
+    }
+
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -289,6 +348,25 @@
     <span>กำลังประมวลผล...</span>
   </div>
 
+  <div id="imageModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button class="modal-close-btn" id="closeModalBtn">&times;</button>
+      <h3 class="text-xl font-bold mb-4 text-gray-800">บันทึกรูปภาพโปรไฟล์ของคุณ</h3>
+      <p class="text-gray-700 mb-4">
+        **สำหรับมือถือ/แท็บเล็ต:** โปรดกดค้างที่รูปภาพด้านล่าง (Long press) แล้วเลือก **"บันทึกรูปภาพ"** หรือ **"ดาวน์โหลดรูปภาพ"**
+      </p>
+      <img id="modalImage" src="" alt="Generated Profile Image">
+      <button id="downloadModalBtn"
+        class="mt-6 bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn mx-auto"
+        style="max-width: 250px;">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+        ดาวน์โหลด (สำหรับเดสก์ท็อป)
+      </button>
+    </div>
+  </div>
+
   <script>
     const imageUpload = document.getElementById('imageUpload');
     const userImage = document.getElementById('userImage');
@@ -302,6 +380,11 @@
     const yPosSlider = document.getElementById('yPosSlider');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const selectedFileName = document.getElementById('selectedFileName');
+
+    const imageModal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const downloadModalBtn = document.getElementById('downloadModalBtn'); // New button in modal
 
     let currentImage = null;
     let currentFrameSrc = null;
@@ -383,7 +466,8 @@
 
     // Function to detect mobile devices
     function isMobileDevice() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // More robust detection including iPad as a mobile device for saving purposes
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     }
 
     // Event listener for download button
@@ -402,7 +486,7 @@
         html2canvas(previewContainer, {
           backgroundColor: null,
           useCORS: true,
-          scale: 2
+          scale: 2 // Higher scale for better resolution
         }).then(canvas => {
           frameImage.classList.remove('hidden'); // Re-show the frame image
 
@@ -422,20 +506,19 @@
             const imageDataUrl = finalCanvas.toDataURL('image/png');
 
             if (isMobileDevice()) {
-              // For mobile devices, open the image in a new tab
-              // Users can then long-press to save the image
-              const newTab = window.open();
-              newTab.document.body.innerHTML = `<img src="${imageDataUrl}" style="width:100%; height:auto; display:block; margin:0 auto;">`;
-              newTab.document.title = 'รูปโปรไฟล์ GAMA Awards';
-              alert('บนมือถือ/แท็บเล็ต: โปรดกดค้างที่รูปภาพ (Long press) แล้วเลือก "บันทึกรูปภาพ" เพื่อดาวน์โหลด');
+              // Show modal with the image for mobile users to long-press
+              modalImage.src = imageDataUrl;
+              imageModal.classList.remove('hidden');
+              // Hide download button in modal if on mobile, as direct download might not work
+              downloadModalBtn.classList.add('hidden'); 
             } else {
               // For desktop, use the traditional download link
               const link = document.createElement('a');
               link.download = 'gama-awards-profile.png';
               link.href = imageDataUrl;
-              document.body.appendChild(link); // Append to body is good practice
+              document.body.appendChild(link);
               link.click();
-              document.body.removeChild(link); // Clean up
+              document.body.removeChild(link);
             }
             loadingOverlay.classList.add('hidden'); // Hide loading overlay
           };
@@ -446,10 +529,30 @@
         }).catch(error => {
           console.error('Oops, something went wrong!', error);
           alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
-          frameImage.classList.remove('hidden'); // Ensure frame is visible again
-          loadingOverlay.classList.add('hidden'); // Hide loading overlay
+          frameImage.classList.remove('hidden');
+          loadingOverlay.classList.add('hidden');
         });
       }, 100);
+    });
+
+    // Close modal button event
+    closeModalBtn.addEventListener('click', () => {
+        imageModal.classList.add('hidden');
+    });
+
+    // Optional: Direct download button inside modal for desktop users (if modal is shown to them)
+    // Or if mobile users want to try direct download (less reliable)
+    downloadModalBtn.addEventListener('click', () => {
+        const imageDataUrl = modalImage.src;
+        if (imageDataUrl) {
+            const link = document.createElement('a');
+            link.download = 'gama-awards-profile.png';
+            link.href = imageDataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        imageModal.classList.add('hidden'); // Close modal after attempting download
     });
 
     // Initial check for download button state
