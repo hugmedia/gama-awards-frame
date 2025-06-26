@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GAMA Awards Frame</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
 
@@ -36,9 +35,9 @@
     .image-container {
       position: relative;
       width: 100%;
-      max-width: 600px; /* Max width of the preview container */
+      max-width: 600px; /* This defines the actual display width for preview */
       aspect-ratio: 1 / 1; /* Ensures it's always a square for display */
-      overflow: hidden; /* This is what crops the view if image is larger */
+      overflow: hidden; /* This is essential for cropping the preview view */
       margin: 0 auto;
       background-color: #f9fafb;
       border: 2px dashed #d1d5db;
@@ -47,9 +46,9 @@
 
     .user-image {
       position: absolute;
-      /* We will control width, height, top, left directly via JS based on calculations */
-      /* NO object-fit: cover anymore to prevent automatic cropping */
+      /* NO object-fit: cover; - we control size and position with JS */
       transform-origin: 0 0; /* Important: Transform from top-left for easier calculation */
+      /* Initially hidden, will be shown and sized by JS */
     }
 
     .frame-image {
@@ -58,7 +57,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
+      pointer-events: none; /* Allows clicks to pass through to the image below */
       z-index: 10;
     }
 
@@ -303,7 +302,7 @@
 
         <div class="mb-4">
           <label for="scaleSlider" class="block text-sm font-medium mb-1 text-gray-600">ขนาด:</label>
-          <input type="range" id="scaleSlider" class="slider w-full" min="10" max="400" value="100">
+          <input type="range" id="scaleSlider" class="slider w-full" min="1" max="400" value="100">
           <div class="flex justify-between text-xs text-gray-500">
             <span>เล็ก</span>
             <span>ใหญ่</span>
@@ -312,7 +311,7 @@
 
         <div class="mb-4">
           <label for="xPosSlider" class="block text-sm font-medium mb-1 text-gray-600">ตำแหน่งแนวนอน:</label>
-          <input type="range" id="xPosSlider" class="slider w-full" min="-200" max="200" value="0">
+          <input type="range" id="xPosSlider" class="slider w-full" min="-100" max="100" value="0">
           <div class="flex justify-between text-xs text-gray-500">
             <span>ซ้าย</span>
             <span>ขวา</span>
@@ -321,7 +320,7 @@
 
         <div class="mb-6">
           <label for="yPosSlider" class="block text-sm font-medium mb-1 text-gray-600">ตำแหน่งแนวตั้ง:</label>
-          <input type="range" id="yPosSlider" class="slider w-full" min="-200" max="200" value="0">
+          <input type="range" id="yPosSlider" class="slider w-full" min="-100" max="100" value="0">
           <div class="flex justify-between text-xs text-gray-500">
             <span>บน</span>
             <span>ล่าง</span>
@@ -388,65 +387,53 @@
     const closeModalBtn = document.getElementById('closeModalBtn');
     const downloadModalBtn = document.getElementById('downloadModalBtn');
 
-    let currentImage = null; // Store base64 or URL
-    let currentFrameSrc = null; // Store frame URL
+    let currentImage = null; // Stores base64 or URL of the uploaded image
+    let currentFrameSrc = null; // Stores URL of the selected frame
     let userImageNaturalWidth = 0;
     let userImageNaturalHeight = 0;
 
-    // กำหนดขนาดมาตรฐานสำหรับภาพเอาต์พุตและภาพพรีวิวใน Canvas
-    const PREVIEW_AND_OUTPUT_SIZE = 600; // ใช้ค่าเดียวกับ max-width ของ image-container (CSS)
-    const FINAL_DOWNLOAD_SIZE = 800; // ความละเอียดสุดท้ายที่ต้องการดาวน์โหลด (สามารถปรับได้ตามต้องการ)
+    // This defines the actual display width for preview in pixels (from CSS max-width)
+    const PREVIEW_CONTAINER_SIZE = 600; 
 
-    // Function to calculate and apply image transform
+    // Function to calculate and apply image transform for preview
     function applyImageTransform() {
       if (!currentImage || userImageNaturalWidth === 0 || userImageNaturalHeight === 0) return;
 
-      // เราไม่ใช้ previewContainer.clientWidth/Height โดยตรงแล้ว
-      // เพราะภาพผู้ใช้อาจมีขนาดใหญ่กว่า Container
-      // เราจะใช้ขนาดจริงของภาพที่โหลดมาเป็น Base
       const scale = scaleSlider.value / 100;
       const xOffsetPercent = xPosSlider.value;
       const yOffsetPercent = yPosSlider.value;
 
-      // 1. ขนาดเริ่มต้นของภาพ (สเกล 100%)
-      const baseWidth = userImageNaturalWidth;
-      const baseHeight = userImageNaturalHeight;
+      // 1. Calculate image dimensions based on its natural size and the scale slider
+      const scaledWidth = userImageNaturalWidth * scale;
+      const scaledHeight = userImageNaturalHeight * scale;
+
+      // 2. Calculate initial position to center the image if it were within the preview container
+      // This is the starting point for applying offsets from sliders
+      const xInitialCenter = (PREVIEW_CONTAINER_SIZE - scaledWidth) / 2;
+      const yInitialCenter = (PREVIEW_CONTAINER_SIZE - scaledHeight) / 2;
+
+      // 3. Apply offsets from sliders (as percentage of PREVIEW_CONTAINER_SIZE)
+      // These offsets move the image relative to its initial centered position
+      const offsetX = (xOffsetPercent / 100) * PREVIEW_CONTAINER_SIZE;
+      const offsetY = (yOffsetPercent / 100) * PREVIEW_CONTAINER_SIZE;
+
+      // 4. Calculate final position
+      const finalX = xInitialCenter + offsetX;
+      const finalY = yInitialCenter + offsetY;
+
+      // Apply styles to the userImage element for preview
+      userImage.style.width = `${scaledWidth}px`;
+      userImage.style.height = `${scaledHeight}px`;
+      userImage.style.left = `${finalX}px`;
+      userImage.style.top = `${finalY}px`;
       
-      // 2. ปรับขนาดภาพตาม Slider
-      const scaledWidth = baseWidth * scale;
-      const scaledHeight = baseHeight * scale;
-
-      // 3. คำนวณตำแหน่งเริ่มต้น (สมมติให้ภาพอยู่ตรงกลาง previewContainer ก่อนเลื่อน)
-      // ตำแหน่งอ้างอิงจากมุมซ้ายบนของ previewContainer (0,0)
-      const previewDisplayWidth = PREVIEW_AND_OUTPUT_SIZE;
-      const previewDisplayHeight = PREVIEW_AND_OUTPUT_SIZE;
-
-      // ตำแหน่งเริ่มต้นของภาพ (หากภาพมีขนาดเท่ากับ previewContainer)
-      // หรือตำแหน่งเริ่มต้นเมื่อสเกล 100%
-      const xInitial = (previewDisplayWidth - scaledWidth) / 2;
-      const yInitial = (previewDisplayHeight - scaledHeight) / 2;
-
-      // 4. คำนวณ offset จาก Slider (ค่า xPos, yPos เป็น % ของ previewContainer width/height)
-      // เราจะใช้ FINAL_DOWNLOAD_SIZE เป็นฐานในการคำนวณ offset เพื่อให้แม่นยำตอนดาวน์โหลด
-      const offsetX = (xOffsetPercent / 100) * FINAL_DOWNLOAD_SIZE;
-      const offsetY = (yOffsetPercent / 100) * FINAL_DOWNLOAD_SIZE;
-
-      // 5. ตำแหน่งสุดท้ายของภาพในพรีวิว (ต้องแปลงจาก FINAL_DOWNLOAD_SIZE กลับมาเป็น PREVIEW_AND_OUTPUT_SIZE)
-      // คำนวณอัตราส่วนการปรับขนาดระหว่างขนาดดาวน์โหลดกับขนาดพรีวิว
-      const ratio = PREVIEW_AND_OUTPUT_SIZE / FINAL_DOWNLOAD_SIZE;
-
-      userImage.style.width = `${scaledWidth * ratio}px`;
-      userImage.style.height = `${scaledHeight * ratio}px`;
-      userImage.style.left = `${xInitial * ratio + offsetX * ratio}px`;
-      userImage.style.top = `${yInitial * ratio + offsetY * ratio}px`;
-
-      // Debugging: Log calculated values
+      // Optional: Log values for debugging
       console.log('--- Preview Transform Calc ---');
-      console.log(`Original: ${userImageNaturalWidth}x${userImageNaturalHeight}`);
-      console.log(`Scaled (PX, base on Original): ${scaledWidth}x${scaledHeight}`);
-      console.log(`Offsets (PX, base on FINAL_DOWNLOAD_SIZE): ${offsetX}, ${offsetY}`);
-      console.log(`Final Left/Top (PX, for Preview): ${userImage.style.left}, ${userImage.style.top}`);
-      console.log(`Final Width/Height (PX, for Preview): ${userImage.style.width}, ${userImage.style.height}`);
+      console.log(`Original Size: ${userImageNaturalWidth}x${userImageNaturalHeight}`);
+      console.log(`Scale: ${scaleSlider.value}%`);
+      console.log(`Scaled Size: ${scaledWidth}x${scaledHeight}`);
+      console.log(`Offsets (PX): ${offsetX}, ${offsetY}`);
+      console.log(`Final Position (PX): left=${finalX}, top=${finalY}`);
       console.log('----------------------------');
     }
 
@@ -475,7 +462,7 @@
             placeholderText.classList.add('hidden');
             currentImage = e.target.result; // Store the base64 string
             
-            // Reset sliders to default values
+            // Reset sliders to default values (100% scale, 0 offset)
             scaleSlider.value = 100;
             xPosSlider.value = 0;
             yPosSlider.value = 0;
@@ -539,16 +526,17 @@
       console.log('Download button clicked. Starting processing...');
       loadingOverlay.classList.remove('hidden');
 
-      // สร้าง Canvas สุดท้ายสำหรับดาวน์โหลด
+      // 1. Create a canvas for final output. Its size MUST match the preview container's effective size.
+      // We use PREVIEW_CONTAINER_SIZE for consistency.
       const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = FINAL_DOWNLOAD_SIZE;
-      finalCanvas.height = FINAL_DOWNLOAD_SIZE;
+      finalCanvas.width = PREVIEW_CONTAINER_SIZE;
+      finalCanvas.height = PREVIEW_CONTAINER_SIZE;
       const context = finalCanvas.getContext('2d');
 
       try {
-        // 1. โหลดภาพที่อัปโหลด (userImage) ด้วย Image object
+        // 2. Load the user's uploaded image (Image object)
         const userImg = new Image();
-        userImg.crossOrigin = 'Anonymous'; // สำคัญสำหรับ CORS
+        userImg.crossOrigin = 'Anonymous'; // Important for CORS if image is from different origin
         userImg.src = currentImage;
 
         await new Promise((resolve, reject) => {
@@ -556,38 +544,30 @@
           userImg.onerror = reject;
         });
 
-        // 2. คำนวณขนาดและตำแหน่งของภาพผู้ใช้สำหรับ Canvas (Final Download Size)
-        // Logic นี้ต้องเหมือนกับ applyImageTransform() ทุกประการ
+        // 3. Calculate user image dimensions and position for the final canvas
+        // This logic is IDENTICAL to applyImageTransform() to ensure 100% match
         const scale = scaleSlider.value / 100;
         const xOffsetPercent = xPosSlider.value;
         const yOffsetPercent = yPosSlider.value;
 
-        // ขนาดเริ่มต้นของภาพ (สเกล 100%)
-        const baseWidth = userImageNaturalWidth;
-        const baseHeight = userImageNaturalHeight;
-        
-        // ปรับขนาดภาพตาม Slider
-        const scaledWidth = baseWidth * scale;
-        const scaledHeight = baseHeight * scale;
+        const scaledWidth = userImageNaturalWidth * scale;
+        const scaledHeight = userImageNaturalHeight * scale;
 
-        // คำนวณตำแหน่งเริ่มต้น (สมมติให้ภาพอยู่ตรงกลาง FINAL_DOWNLOAD_SIZE ก่อนเลื่อน)
-        const xInitial = (FINAL_DOWNLOAD_SIZE - scaledWidth) / 2;
-        const yInitial = (FINAL_DOWNLOAD_SIZE - scaledHeight) / 2;
+        const xInitialCenter = (PREVIEW_CONTAINER_SIZE - scaledWidth) / 2;
+        const yInitialCenter = (PREVIEW_CONTAINER_SIZE - scaledHeight) / 2;
 
-        // คำนวณ offset จาก Slider (ค่า xPos, yPos เป็น % ของ FINAL_DOWNLOAD_SIZE)
-        const offsetX = (xOffsetPercent / 100) * FINAL_DOWNLOAD_SIZE;
-        const offsetY = (yOffsetPercent / 100) * FINAL_DOWNLOAD_SIZE;
+        const offsetX = (xOffsetPercent / 100) * PREVIEW_CONTAINER_SIZE;
+        const offsetY = (yOffsetPercent / 100) * PREVIEW_CONTAINER_SIZE;
 
-        // ตำแหน่งสุดท้ายบน Canvas สำหรับดาวน์โหลด
-        const finalXOnCanvas = xInitial + offsetX;
-        const finalYOnCanvas = yInitial + offsetY;
+        const finalXOnCanvas = xInitialCenter + offsetX;
+        const finalYOnCanvas = yInitialCenter + offsetY;
 
-        // 3. วาดภาพผู้ใช้ลงบน finalCanvas
+        // 4. Draw the user's image onto the final canvas
         context.drawImage(userImg, finalXOnCanvas, finalYOnCanvas, scaledWidth, scaledHeight);
 
-        // 4. โหลดภาพกรอบ (frameImage)
+        // 5. Load the frame image
         const frameImg = new Image();
-        frameImg.crossOrigin = 'Anonymous'; // สำคัญสำหรับ CORS
+        frameImg.crossOrigin = 'Anonymous'; // Important for CORS
         frameImg.src = currentFrameSrc;
 
         await new Promise((resolve, reject) => {
@@ -595,10 +575,10 @@
           frameImg.onerror = reject;
         });
 
-        // 5. วาดภาพกรอบทับลงไปบน finalCanvas
-        context.drawImage(frameImg, 0, 0, FINAL_DOWNLOAD_SIZE, FINAL_DOWNLOAD_SIZE);
+        // 6. Draw the frame image over the user's image on the final canvas
+        context.drawImage(frameImg, 0, 0, PREVIEW_CONTAINER_SIZE, PREVIEW_CONTAINER_SIZE);
 
-        // --- เสร็จสิ้นการรวมภาพบน Canvas ---
+        // --- Image combination on Canvas complete ---
 
         const imageDataUrl = finalCanvas.toDataURL('image/png');
 
