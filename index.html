@@ -35,8 +35,9 @@
 
     .image-container {
       position: relative;
-      width: 600px; /* Base size for preview */
-      height: 600px;
+      width: 100%;
+      max-width: 600px;
+      aspect-ratio: 1 / 1;
       overflow: hidden;
       margin: 0 auto;
       background-color: #f9fafb;
@@ -44,23 +45,14 @@
       border-radius: 8px;
     }
 
-    @media (max-width: 640px) {
-      .image-container {
-        width: 100%;
-        height: 300px;
-      }
-    }
-
-    /* user-image and frame-image styles for preview */
     .user-image {
       position: absolute;
       transform-origin: center;
       width: 100%; 
       height: 100%;
-      object-fit: cover; /* This makes the image cover the area, cropping as needed */
+      object-fit: cover;
       left: 0;
       top: 0;
-      /* Initial transform will be applied via JS */
     }
 
     .frame-image {
@@ -69,8 +61,8 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none; /* Allows clicks to pass through */
-      z-index: 10; /* Ensures frame is on top of user image */
+      pointer-events: none;
+      z-index: 10;
     }
 
     .slider {
@@ -171,23 +163,24 @@
       100% { transform: rotate(360deg); }
     }
   </style>
-</head>
-<body class="min-h-screen">
+</head> <body class="min-h-screen">
   <div class="header-gradient"></div>
   <div class="container mx-auto px-4 py-8">
     <div class="flex justify-center mb-6">
       <img src="https://hugmediacreation.com/wp-content/uploads/2025/06/logo-gama-awards.png" alt="GAMA Awards Logo" class="h-24">
     </div>
     <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">GAMA Awards Frame</h1>
-    <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">เปลี่ยนรูปโปรไฟล์ของคุณให้โดดเด่นด้วยกรอบรูปภาพพิเศษจาก GAMA Awards อัพโหลดรูปภาพของคุณ เลือกกรอบที่ชอบ และดาวน์โหลดเพื่อใช้เป็นรูปโปรไฟล์ใหม่ของคุณ</p>
-    
+    <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
+      เปลี่ยนรูปโปรไฟล์ของคุณให้โดดเด่นด้วยกรอบรูปภาพพิเศษจาก GAMA Awards
+      อัพโหลดรูปภาพของคุณ เลือกกรอบที่ชอบ และดาวน์โหลดเพื่อใช้เป็นรูปโปรไฟล์ใหม่ของคุณ
+    </p>
+
     <div class="mb-8 max-w-xl mx-auto">
       <div class="card p-6">
         <label class="block text-lg font-medium mb-3 text-gray-700">อัพโหลดรูปโปรไฟล์ของคุณ:</label>
         <div class="file-upload">
-          <button id="uploadBtn" class="w-full bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 0 003 3h10a3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
-            </svg>
+          <button id="uploadBtn"
+            class="w-full bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn">
             เลือกรูปภาพจากเครื่อง
           </button>
           <input type="file" id="imageUpload" accept="image/*">
@@ -195,7 +188,7 @@
         <p id="selectedFileName" class="mt-2 text-center text-sm text-gray-500"></p>
       </div>
     </div>
-    
+
     <div class="mb-8">
       <h2 class="text-xl font-medium mb-4 text-center text-gray-700">เลือกกรอบรูปภาพ</h2>
       <div class="flex flex-wrap justify-center gap-3">
@@ -229,15 +222,12 @@
         </div>
       </div>
     </div>
-    
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
       <div class="lg:col-span-2">
         <div class="card p-4">
           <div id="preview" class="image-container flex items-center justify-center">
             <div id="placeholderText" class="text-center p-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
               <p class="text-gray-500">โปรดอัพโหลดรูปภาพและเลือกกรอบ</p>
             </div>
             <img id="userImage" class="user-image hidden" src="" alt="User uploaded image">
@@ -245,10 +235,10 @@
           </div>
         </div>
       </div>
-      
+
       <div class="card p-6">
         <h3 class="text-lg font-medium mb-4 text-gray-700">ปรับแต่งรูปภาพ</h3>
-        
+
         <div class="mb-4">
           <label for="scaleSlider" class="block text-sm font-medium mb-1 text-gray-600">ขนาด:</label>
           <input type="range" id="scaleSlider" class="slider w-full" min="50" max="200" value="100">
@@ -257,7 +247,7 @@
             <span>ใหญ่</span>
           </div>
         </div>
-        
+
         <div class="mb-4">
           <label for="xPosSlider" class="block text-sm font-medium mb-1 text-gray-600">ตำแหน่งแนวนอน:</label>
           <input type="range" id="xPosSlider" class="slider w-full" min="-100" max="100" value="0">
@@ -266,7 +256,7 @@
             <span>ขวา</span>
           </div>
         </div>
-        
+
         <div class="mb-6">
           <label for="yPosSlider" class="block text-sm font-medium mb-1 text-gray-600">ตำแหน่งแนวตั้ง:</label>
           <input type="range" id="yPosSlider" class="slider w-full" min="-100" max="100" value="0">
@@ -275,269 +265,25 @@
             <span>ล่าง</span>
           </div>
         </div>
-        
-        <button id="downloadBtn" class="w-full bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn disabled:opacity-50 disabled:cursor-not-allowed mb-3" disabled>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 0 003 3h10a3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
-          </svg>
+
+        <button id="downloadBtn"
+          class="w-full bg-gradient-to-r from-purple-800 to-pink-600 hover:from-purple-700 hover:to-pink-500 text-white py-3 px-6 rounded-lg font-medium flex items-center justify-center btn disabled:opacity-50 disabled:cursor-not-allowed mb-3"
+          disabled>
           ดาวน์โหลดรูปโปรไฟล์
         </button>
-        
-        <p class="mt-4 text-sm text-gray-500 text-center">ดาวน์โหลดและใช้เป็นรูปโปรไฟล์ของคุณบนโซเชียลมีเดีย</p>
+
+        <p class="mt-4 text-sm text-gray-500 text-center">
+          ดาวน์โหลดและใช้เป็นรูปโปรไฟล์ของคุณบนโซเชียลมีเดีย
+        </p>
       </div>
     </div>
-    
+
     <div class="text-center text-sm text-gray-500 mb-8">
       © GAMA Awards 2025 - ระบบใส่กรอบรูปภาพ
     </div>
   </div>
-  
+
   <div id="loadingOverlay" class="loading hidden">
     <div class="spinner"></div>
     <span>กำลังประมวลผล...</span>
   </div>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Elements
-      const imageUpload = document.getElementById('imageUpload');
-      const uploadBtn = document.getElementById('uploadBtn');
-      const selectedFileName = document.getElementById('selectedFileName');
-      const frameOptions = document.querySelectorAll('.frame-option');
-      const userImagePreview = document.getElementById('userImage'); 
-      const frameImagePreview = document.getElementById('frameImage'); 
-      const placeholderText = document.getElementById('placeholderText');
-      const scaleSlider = document.getElementById('scaleSlider');
-      const xPosSlider = document.getElementById('xPosSlider');
-      const yPosSlider = document.getElementById('yPosSlider');
-      const downloadBtn = document.getElementById('downloadBtn');
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      const previewContainer = document.getElementById('preview');
-
-      // Frame URLs (UPDATED TO LOCAL FILE PATHS - ตรวจสอบให้แน่ใจว่าชื่อไฟล์ตรงกับที่คุณอัปโหลดบน GitHub)
-      const frameUrls = {
-        'MAA': './MASTER MULTILINE Award.png',
-        'MFA': './MASTER FIRM Award.png',
-        'MMA': './MASTER AGENCY Award.png',
-        'IMA': './International Management Award.png',
-        'FLA': './Frontline Leader Awards.png',
-        'ERA': './Excellence Recruitment Award.png',
-        'COE': './Circle of Excellence Award.png'
-      };
-      
-      // State
-      let selectedFrame = null;
-      let userImageLoaded = false; 
-      let frameImageLoaded = false; 
-      
-      // Function to check if both images are loaded for download enablement
-      function checkDownloadAvailability() {
-        downloadBtn.disabled = !(userImageLoaded && selectedFrame && frameImageLoaded);
-      }
-
-      // Trigger file input when the upload button is clicked
-      uploadBtn.addEventListener('click', function() {
-        imageUpload.click();
-      });
-      
-      // Handle file upload
-      imageUpload.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-          const file = this.files[0];
-          selectedFileName.textContent = file.name;
-          
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            userImagePreview.onload = function() {
-              placeholderText.classList.add('hidden');
-              userImagePreview.classList.remove('hidden');
-              userImageLoaded = true;
-              // Reset sliders to default when a new image is loaded
-              scaleSlider.value = 100;
-              xPosSlider.value = 0;
-              yPosSlider.value = 0;
-              updateImagePosition(); // Apply default positions for preview
-              checkDownloadAvailability();
-            };
-            userImagePreview.onerror = function() {
-              alert('เกิดข้อผิดพลาดในการโหลดรูปภาพของคุณ กรุณาลองใหม่');
-              userImageLoaded = false;
-              checkDownloadAvailability();
-            };
-            userImagePreview.src = e.target.result;
-          };
-          reader.readAsDataURL(file);
-        } else {
-          selectedFileName.textContent = ''; 
-          userImagePreview.classList.add('hidden');
-          placeholderText.classList.remove('hidden');
-          userImageLoaded = false;
-          checkDownloadAvailability();
-        }
-      });
-      
-      // Select frame
-      frameOptions.forEach(option => {
-        option.addEventListener('click', function() {
-          const frameId = this.dataset.frame;
-          
-          frameOptions.forEach(opt => opt.classList.remove('selected'));
-          this.classList.add('selected');
-          
-          selectedFrame = frameId;
-          
-          // Load frame image for preview and set frameImageLoaded flag
-          frameImagePreview.onload = function() {
-            frameImagePreview.classList.remove('hidden');
-            frameImageLoaded = true;
-            checkDownloadAvailability();
-          };
-          frameImagePreview.onerror = function() {
-            console.error('Failed to load frame image:', frameUrls[frameId]);
-            alert('เกิดข้อผิดพลาดในการโหลดกรอบรูป กรุณาตรวจสอบว่าไฟล์รูปภาพกรอบอยู่ในโฟลเดอร์เดียวกันกับไฟล์ HTML นี้แล้ว และชื่อไฟล์ตรงกัน');
-            frameImageLoaded = false;
-            checkDownloadAvailability();
-          };
-          frameImagePreview.src = frameUrls[frameId];
-        });
-      });
-      
-      // Update image position and scale for the PREVIEW
-      function updateImagePosition() {
-        if (!userImageLoaded) return; 
-        
-        const scale = scaleSlider.value / 100;
-        const xPos = parseFloat(xPosSlider.value);
-        const yPos = parseFloat(yPosSlider.value);
-        
-        userImagePreview.style.transform = `translate(${xPos}px, ${yPos}px) scale(${scale})`;
-      }
-      
-      // Event listeners for sliders
-      scaleSlider.addEventListener('input', updateImagePosition);
-      xPosSlider.addEventListener('input', updateImagePosition);
-      yPosSlider.addEventListener('input', updateImagePosition);
-      
-      // Download functionality using html2canvas
-      downloadBtn.addEventListener('click', function() {
-        if (!userImageLoaded || !selectedFrame || !frameImageLoaded) {
-          alert('โปรดอัปโหลดรูปภาพและเลือกกรอบก่อนดาวน์โหลด');
-          return;
-        }
-
-        loadingOverlay.classList.remove('hidden');
-        
-        // Use a temporary div to render the full-resolution image
-        const tempRenderDiv = document.createElement('div');
-        tempRenderDiv.style.width = '1920px';
-        tempRenderDiv.style.height = '1920px';
-        tempRenderDiv.style.position = 'absolute'; 
-        tempRenderDiv.style.left = '-9999px';
-        tempRenderDiv.style.top = '-9999px';
-        tempRenderDiv.style.overflow = 'hidden'; 
-        tempRenderDiv.style.backgroundColor = 'transparent'; 
-        document.body.appendChild(tempRenderDiv);
-
-        // Create new image elements for the high-res render
-        const hiResUserImage = new Image();
-        const hiResFrameImage = new Image();
-
-        hiResUserImage.src = userImagePreview.src;
-        hiResFrameImage.src = frameImagePreview.src;
-
-        const scaleFactor = 1920 / 600; 
-
-        const currentScale = parseFloat(scaleSlider.value) / 100;
-        const currentXPos = parseFloat(xPosSlider.value);
-        const currentYPos = parseFloat(yPosSlider.value);
-
-        hiResUserImage.style.transform = `translate(${currentXPos * scaleFactor}px, ${currentYPos * scaleFactor}px) scale(${currentScale})`;
-        hiResUserImage.style.transformOrigin = 'center center'; 
-        hiResUserImage.style.objectFit = 'cover'; 
-
-        hiResUserImage.style.width = '100%'; 
-        hiResUserImage.style.height = '100%';
-        hiResUserImage.style.left = '0';
-        hiResUserImage.style.top = '0';
-        hiResUserImage.style.position = 'absolute';
-        hiResUserImage.style.display = 'block'; 
-
-        hiResFrameImage.style.width = '100%'; 
-        hiResFrameImage.style.height = '100%';
-        hiResFrameImage.style.left = '0';
-        hiResFrameImage.style.top = '0';
-        hiResFrameImage.style.position = 'absolute';
-        hiResFrameImage.style.zIndex = '10'; 
-        hiResFrameImage.style.display = 'block'; 
-
-        tempRenderDiv.appendChild(hiResUserImage);
-        tempRenderDiv.appendChild(hiResFrameImage);
-
-        // เมื่อใช้ไฟล์ในเครื่อง ไม่จำเป็นต้องตั้งค่า crossOrigin = 'anonymous'; 
-        // เนื่องจากไฟล์อยู่ในโดเมนเดียวกันแล้ว ปัญหา CORS จะหมดไป
-        // hiResFrameImage.crossOrigin = 'anonymous'; 
-
-        // Wait for images to load in the temporary div
-        Promise.all([
-            new Promise(resolve => {
-                if (hiResUserImage.complete) {
-                    resolve();
-                } else {
-                    hiResUserImage.onload = resolve;
-                    hiResUserImage.onerror = () => {
-                        console.error('High-res user image load error. This might cause issues.');
-                        resolve(); 
-                    };
-                }
-            }),
-            new Promise(resolve => {
-                if (hiResFrameImage.complete) {
-                    resolve();
-                } else {
-                    hiResFrameImage.onload = resolve;
-                    hiResFrameImage.onerror = () => {
-                        console.error('High-res frame image load error. Make sure local frame files exist.');
-                        resolve(); 
-                    };
-                }
-            })
-        ]).then(() => {
-            html2canvas(tempRenderDiv, {
-                width: 1920,
-                height: 1920,
-                scale: 1, 
-                backgroundColor: null,
-                useCORS: false, // ไม่ต้องใช้ CORS แล้วเมื่อเป็น local files
-                allowTaint: false, // ไม่ต้อง allow Taint แล้วเมื่อไม่มี CORS issue
-                logging: true,
-                imageTimeout: 15000 
-            }).then(canvas => {
-                document.body.removeChild(tempRenderDiv);
-                
-                try {
-                    const link = document.createElement('a');
-                    link.download = `profile-${selectedFrame}-gama-awards.png`;
-                    link.href = canvas.toDataURL('image/png'); 
-                    link.click();
-                } catch (e) {
-                    console.error('Error creating data URL or download link:', e);
-                    alert('ไม่สามารถดาวน์โหลดรูปภาพได้ (อาจเกิดจากปัญหาภายในหรือรูปภาพต้นฉบับเสียหาย)');
-                }
-                
-                loadingOverlay.classList.add('hidden');
-            }).catch(err => {
-                console.error('Error generating image with html2canvas:', err);
-                alert('เกิดข้อผิดพลาดในการสร้างรูปภาพ กรุณาลองใหม่อีกครั้ง');
-                document.body.removeChild(tempRenderDiv); 
-                loadingOverlay.classList.add('hidden');
-            });
-        }).catch(err => {
-            console.error('Error waiting for high-res images to load:', err);
-            alert('เกิดข้อผิดพลาดในการเตรียมรูปภาพเพื่อดาวน์โหลด กรุณาลองใหม่อีกครั้ง');
-            document.body.removeChild(tempRenderDiv);
-            loadingOverlay.classList.add('hidden');
-        });
-      });
-    });
-  </script>
-</body>
-</html>
