@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GAMA Awards Frame</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script> 
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
 
@@ -48,7 +48,7 @@
     .user-image {
       position: absolute;
       transform-origin: center;
-      width: 100%; 
+      width: 100%;
       height: 100%;
       object-fit: cover;
       left: 0;
@@ -163,7 +163,8 @@
       100% { transform: rotate(360deg); }
     }
   </style>
-</head> <body class="min-h-screen">
+</head>
+<body class="min-h-screen">
   <div class="header-gradient"></div>
   <div class="container mx-auto px-4 py-8">
     <div class="flex justify-center mb-6">
@@ -287,3 +288,154 @@
     <div class="spinner"></div>
     <span>กำลังประมวลผล...</span>
   </div>
+
+  <script>
+    const imageUpload = document.getElementById('imageUpload');
+    const userImage = document.getElementById('userImage');
+    const frameImage = document.getElementById('frameImage');
+    const previewContainer = document.getElementById('preview');
+    const placeholderText = document.getElementById('placeholderText');
+    const frameOptions = document.querySelectorAll('.frame-option');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const scaleSlider = document.getElementById('scaleSlider');
+    const xPosSlider = document.getElementById('xPosSlider');
+    const yPosSlider = document.getElementById('yPosSlider');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const selectedFileName = document.getElementById('selectedFileName');
+
+    let currentImage = null;
+    let currentFrameSrc = null;
+
+    // Function to update the image transform
+    function updateImageTransform() {
+      if (currentImage) {
+        const scale = scaleSlider.value / 100;
+        const xPos = xPosSlider.value;
+        const yPos = yPosSlider.value;
+        userImage.style.transform = `scale(${scale}) translate(${xPos}%, ${yPos}%)`;
+      }
+      checkDownloadButtonState();
+    }
+
+    // Function to check if download button should be enabled
+    function checkDownloadButtonState() {
+      if (currentImage && currentFrameSrc) {
+        downloadBtn.disabled = false;
+      } else {
+        downloadBtn.disabled = true;
+      }
+    }
+
+    // Event listener for image upload
+    imageUpload.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          userImage.src = e.target.result;
+          userImage.classList.remove('hidden');
+          placeholderText.classList.add('hidden');
+          currentImage = userImage.src;
+          selectedFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`;
+          // Reset sliders to default on new image upload
+          scaleSlider.value = 100;
+          xPosSlider.value = 0;
+          yPosSlider.value = 0;
+          updateImageTransform();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        userImage.src = '';
+        userImage.classList.add('hidden');
+        placeholderText.classList.remove('hidden');
+        currentImage = null;
+        selectedFileName.textContent = '';
+        checkDownloadButtonState();
+      }
+    });
+
+    // Event listeners for frame selection
+    frameOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        // Remove 'selected' class from all options
+        frameOptions.forEach(opt => opt.classList.remove('selected'));
+        // Add 'selected' class to the clicked option
+        option.classList.add('selected');
+
+        const frameType = option.dataset.frame;
+        // Assuming frame images are in the same directory as the HTML
+        currentFrameSrc = `./${option.querySelector('img').alt}.png`;
+        frameImage.src = currentFrameSrc;
+        frameImage.classList.remove('hidden');
+        checkDownloadButtonState();
+      });
+    });
+
+    // Event listeners for sliders
+    scaleSlider.addEventListener('input', updateImageTransform);
+    xPosSlider.addEventListener('input', updateImageTransform);
+    yPosSlider.addEventListener('input', updateImageTransform);
+
+    // Event listener for download button
+    downloadBtn.addEventListener('click', () => {
+      if (!currentImage || !currentFrameSrc) {
+        alert('กรุณาอัพโหลดรูปภาพและเลือกกรอบก่อนดาวน์โหลด');
+        return;
+      }
+
+      loadingOverlay.classList.remove('hidden'); // Show loading overlay
+
+      // Temporarily hide the frame image to capture only the user image
+      frameImage.classList.add('hidden');
+
+      // Use a timeout to ensure the DOM updates before html2canvas runs
+      setTimeout(() => {
+        html2canvas(previewContainer, {
+          backgroundColor: null, // Transparent background
+          useCORS: true, // Important for external images if any
+          scale: 2 // Increase scale for higher resolution output
+        }).then(canvas => {
+          // Re-show the frame image
+          frameImage.classList.remove('hidden');
+
+          // Draw the frame on top of the captured user image canvas
+          const finalCanvas = document.createElement('canvas');
+          const context = finalCanvas.getContext('2d');
+          finalCanvas.width = canvas.width;
+          finalCanvas.height = canvas.height;
+
+          // Draw user image (from the captured canvas)
+          context.drawImage(canvas, 0, 0);
+
+          // Draw the frame image on top
+          const frameImg = new Image();
+          frameImg.crossOrigin = 'Anonymous'; // Handle CORS if frame images are not on the same origin
+          frameImg.src = currentFrameSrc;
+          frameImg.onload = () => {
+            context.drawImage(frameImg, 0, 0, finalCanvas.width, finalCanvas.height);
+
+            // Trigger download
+            const link = document.createElement('a');
+            link.download = 'gama-awards-profile.png';
+            link.href = finalCanvas.toDataURL('image/png');
+            link.click();
+            loadingOverlay.classList.add('hidden'); // Hide loading overlay
+          };
+          frameImg.onerror = () => {
+            alert('ไม่สามารถโหลดกรอบรูปได้');
+            loadingOverlay.classList.add('hidden'); // Hide loading overlay
+          };
+        }).catch(error => {
+          console.error('Oops, something went wrong!', error);
+          alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
+          frameImage.classList.remove('hidden'); // Ensure frame is visible again
+          loadingOverlay.classList.add('hidden'); // Hide loading overlay
+        });
+      }, 100); // Small delay
+    });
+
+    // Initial check for download button state
+    checkDownloadButtonState();
+  </script>
+</body>
+</html>
