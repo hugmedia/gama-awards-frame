@@ -47,12 +47,9 @@
 
     .user-image {
       position: absolute;
-      transform-origin: center;
-      width: 100%; /* base width for user image within container */
-      height: 100%; /* base height for user image within container */
-      object-fit: cover; /* Ensures image covers the area, potentially cropping */
-      left: 0;
-      top: 0;
+      /* We will control width, height, top, left directly via JS based on calculations */
+      /* No object-fit: cover anymore */
+      transform-origin: 0 0; /* Important: Transform from top-left for easier calculation */
     }
 
     .frame-image {
@@ -391,23 +388,59 @@
     const closeModalBtn = document.getElementById('closeModalBtn');
     const downloadModalBtn = document.getElementById('downloadModalBtn');
 
-    let currentImage = null;
-    let currentFrameSrc = null;
+    let currentImage = null; // Store base64 or URL
+    let currentFrameSrc = null; // Store frame URL
+    let userImageNaturalWidth = 0;
+    let userImageNaturalHeight = 0;
 
-    // กำหนดขนาดมาตรฐานสำหรับภาพเอาต์พุต (เพื่อให้แน่ใจว่าเป็นสี่เหลี่ยมจตุรัสเสมอ)
-    // ค่านี้จะกำหนดความละเอียดของภาพสุดท้ายด้วย ควรเป็นค่าที่เหมาะสมกับกรอบ
-    const OUTPUT_SIZE = 800; // สามารถปรับเปลี่ยนได้ เช่น 1000, 1200 เพื่อความละเอียดสูงขึ้น
+    // กำหนดขนาดมาตรฐานสำหรับภาพเอาต์พุตและภาพพรีวิวใน Canvas
+    // ค่านี้ควรเท่ากับ max-width ของ .image-container และ aspect-ratio 1/1
+    const PREVIEW_AND_OUTPUT_SIZE = 600; // ใช้ค่าเดียวกับ max-width ของ image-container
+    const FINAL_DOWNLOAD_SIZE = 800; // สามารถกำหนดความละเอียดสุดท้ายที่ต้องการดาวน์โหลด
 
-    // Function to update the image transform
-    function updateImageTransform() {
-      if (currentImage) {
-        const scale = scaleSlider.value / 100;
-        const xPos = xPosSlider.value;
-        const yPos = yPosSlider.value;
-        // Apply transform directly to the userImage element for preview
-        userImage.style.transform = `scale(${scale}) translate(${xPos}%, ${yPos}%)`;
+    // Function to calculate and apply image transform
+    function applyImageTransform() {
+      if (!currentImage) return;
+
+      const previewWidth = previewContainer.clientWidth;
+      const previewHeight = previewContainer.clientHeight;
+
+      const scale = scaleSlider.value / 100;
+      const xOffsetPercent = xPosSlider.value;
+      const yOffsetPercent = yPosSlider.value;
+
+      // Calculate initial dimensions to fit the smaller side of the image into the square preview
+      // This ensures the image is NEVER cropped initially and maintains its aspect ratio
+      let baseWidth, baseHeight;
+      const imageAspectRatio = userImageNaturalWidth / userImageNaturalHeight;
+      const containerAspectRatio = previewWidth / previewHeight; // Should be 1 as preview is square
+
+      if (imageAspectRatio > containerAspectRatio) { // Image is wider than container
+          baseWidth = previewWidth;
+          baseHeight = baseWidth / imageAspectRatio;
+      } else { // Image is taller or same aspect ratio as container
+          baseHeight = previewHeight;
+          baseWidth = baseHeight * imageAspectRatio;
       }
-      checkDownloadButtonState();
+      
+      // Apply user scale
+      const scaledWidth = baseWidth * scale;
+      const scaledHeight = baseHeight * scale;
+
+      // Calculate position based on the center of the scaled image within the preview container
+      // This logic must exactly match what will happen on the final canvas
+      const xInitial = (previewWidth - scaledWidth) / 2;
+      const yInitial = (previewHeight - scaledHeight) / 2;
+
+      // Apply user offsets (as percentage of container size)
+      const xFinal = xInitial + (xOffsetPercent / 100) * previewWidth;
+      const yFinal = yInitial + (yOffsetPercent / 100) * previewHeight;
+
+      // Apply styles to the preview image
+      userImage.style.width = `${scaledWidth}px`;
+      userImage.style.height = `${scaledHeight}px`;
+      userImage.style.left = `${xFinal}px`;
+      userImage.style.top = `${yFinal}px`;
     }
 
     // Function to check if download button should be enabled
@@ -423,18 +456,25 @@
     imageUpload.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (file) {
-        selectedFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`; // Display file name immediately
+        selectedFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`;
         const reader = new FileReader();
         reader.onload = (e) => {
-          userImage.src = e.target.result;
-          userImage.classList.remove('hidden');
-          placeholderText.classList.add('hidden');
-          currentImage = userImage.src;
-          // Reset sliders to default on new image upload
-          scaleSlider.value = 100;
-          xPosSlider.value = 0;
-          yPosSlider.value = 0;
-          updateImageTransform();
+          const img = new Image();
+          img.onload = () => {
+            userImageNaturalWidth = img.naturalWidth;
+            userImageNaturalHeight = img.naturalHeight;
+            userImage.src = e.target.result;
+            userImage.classList.remove('hidden');
+            placeholderText.classList.add('hidden');
+            currentImage = e.target.result; // Store the base64 string
+            
+            // Reset sliders and apply initial transform
+            scaleSlider.value = 100;
+            xPosSlider.value = 0;
+            yPosSlider.value = 0;
+            applyImageTransform(); // Apply initial sizing and positioning
+          };
+          img.src = e.target.result; // Load image to get natural dimensions
         };
         reader.readAsDataURL(file);
       } else {
@@ -442,6 +482,8 @@
         userImage.classList.add('hidden');
         placeholderText.classList.remove('hidden');
         currentImage = null;
+        userImageNaturalWidth = 0;
+        userImageNaturalHeight = 0;
         selectedFileName.textContent = '';
         checkDownloadButtonState();
       }
@@ -471,9 +513,9 @@
     });
 
     // Event listeners for sliders
-    scaleSlider.addEventListener('input', updateImageTransform);
-    xPosSlider.addEventListener('input', updateImageTransform);
-    yPosSlider.addEventListener('input', updateImageTransform);
+    scaleSlider.addEventListener('input', applyImageTransform);
+    xPosSlider.addEventListener('input', applyImageTransform);
+    yPosSlider.addEventListener('input', applyImageTransform);
 
     // Function to detect mobile devices
     function isMobileDevice() {
@@ -481,25 +523,25 @@
     }
 
     // Event listener for download button
-    downloadBtn.addEventListener('click', async () => { // ใช้ async function
+    downloadBtn.addEventListener('click', async () => {
       if (!currentImage || !currentFrameSrc) {
         alert('กรุณาอัพโหลดรูปภาพและเลือกกรอบก่อนดาวน์โหลด');
         return;
       }
 
       console.log('Download button clicked. Starting processing...');
-      loadingOverlay.classList.remove('hidden'); // Show loading overlay
+      loadingOverlay.classList.remove('hidden');
 
-      // กำหนดขนาดของ Canvas สุดท้าย
+      // สร้าง Canvas สุดท้ายสำหรับดาวน์โหลด
       const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = OUTPUT_SIZE;
-      finalCanvas.height = OUTPUT_SIZE;
+      finalCanvas.width = FINAL_DOWNLOAD_SIZE;
+      finalCanvas.height = FINAL_DOWNLOAD_SIZE;
       const context = finalCanvas.getContext('2d');
 
       try {
-        // 1. โหลดภาพที่อัปโหลด (userImage) ด้วย Image object เพื่อเข้าถึงขนาดจริง
+        // 1. โหลดภาพที่อัปโหลด (userImage) ด้วย Image object
         const userImg = new Image();
-        userImg.crossOrigin = 'Anonymous'; // เพื่อป้องกัน "tainted canvas"
+        userImg.crossOrigin = 'Anonymous'; // สำคัญสำหรับ CORS
         userImg.src = currentImage;
 
         await new Promise((resolve, reject) => {
@@ -507,66 +549,39 @@
           userImg.onerror = reject;
         });
 
-        // 2. คำนวณ transform เพื่อนำมาใช้กับ Canvas
-        const scaleValue = scaleSlider.value / 100; // ค่า scale จาก slider
-        const xPosPercent = xPosSlider.value; // ค่า offset X เป็น %
-        const yPosPercent = yPosSlider.value; // ค่า offset Y เป็น %
+        // 2. คำนวณขนาดและตำแหน่งของภาพผู้ใช้สำหรับ Canvas
+        // Logic นี้ต้องเหมือนกับ applyImageTransform() แต่ปรับสเกลตาม FINAL_DOWNLOAD_SIZE
+        const scale = scaleSlider.value / 100;
+        const xOffsetPercent = xPosSlider.value;
+        const yOffsetPercent = yPosSlider.value;
 
-        // --------------------------------------------------------------------
-        // คำนวณขนาดและตำแหน่งของภาพผู้ใช้บน Canvas อย่างแม่นยำ
-        // เป้าหมายคือให้ "สเกลที่แสดงผลบนหน้าจอ" ถูกนำไปใช้กับ OUTPUT_SIZE
-        // --------------------------------------------------------------------
+        let baseWidth, baseHeight;
+        const imageAspectRatio = userImageNaturalWidth / userImageNaturalHeight;
+        const containerAspectRatio = 1; // Square target canvas
 
-        // ขนาดจริงของ previewContainer ที่แสดงผลบนหน้าจอ
-        // เราใช้ clientWidth/clientHeight เพื่อให้ได้ขนาดที่ CSS render ออกมาจริงๆ
-        const previewDisplayWidth = previewContainer.clientWidth;
-        const previewDisplayHeight = previewContainer.clientHeight;
-
-        // คำนวณสเกลของ userImage เมื่อเทียบกับ previewContainer
-        // ถ้า userImage มี object-fit: cover; มันจะถูกปรับให้เต็มพื้นที่ตามกว้างหรือสูง
-        // และจะขยับตาม slider
-        let imgDisplayWidth = previewDisplayWidth;
-        let imgDisplayHeight = previewDisplayHeight;
-        const imgAspectRatio = userImg.naturalWidth / userImg.naturalHeight;
-        const containerAspectRatio = previewDisplayWidth / previewDisplayHeight;
-
-        if (imgAspectRatio > containerAspectRatio) {
-            // ภาพกว้างกว่า container (cover by width)
-            imgDisplayHeight = previewDisplayWidth / imgAspectRatio;
+        if (imageAspectRatio > containerAspectRatio) {
+            baseWidth = FINAL_DOWNLOAD_SIZE;
+            baseHeight = baseWidth / imageAspectRatio;
         } else {
-            // ภาพสูงกว่า container (cover by height)
-            imgDisplayWidth = previewDisplayHeight * imgAspectRatio;
+            baseHeight = FINAL_DOWNLOAD_SIZE;
+            baseWidth = baseHeight * imageAspectRatio;
         }
+        
+        const scaledWidth = baseWidth * scale;
+        const scaledHeight = baseHeight * scale;
 
-        // คำนวณขนาดของภาพที่ *ควรจะแสดงผล* ภายใน previewContainer ตาม scale ของ slider
-        const finalImgWidthOnCanvas = imgDisplayWidth * scaleValue * (OUTPUT_SIZE / previewDisplayWidth);
-        const finalImgHeightOnCanvas = imgDisplayHeight * scaleValue * (OUTPUT_SIZE / previewDisplayHeight);
-        
-        // คำนวณตำแหน่งเริ่มต้นของภาพบน previewContainer (ก่อน translate)
-        // เนื่องจาก object-fit: cover; ภาพจะอยู่ตรงกลาง
-        const initialImgXOnCanvas = (OUTPUT_SIZE - finalImgWidthOnCanvas) / 2;
-        const initialImgYOnCanvas = (OUTPUT_SIZE - finalImgHeightOnCanvas) / 2;
-        
-        // คำนวณ offset จาก slider (ค่า xPos, yPos เป็น % ของ previewContainer width/height)
-        const offsetXOnCanvas = (xPosPercent / 100) * OUTPUT_SIZE;
-        const offsetYOnCanvas = (yPosPercent / 100) * OUTPUT_SIZE;
+        const xInitial = (FINAL_DOWNLOAD_SIZE - scaledWidth) / 2;
+        const yInitial = (FINAL_DOWNLOAD_SIZE - scaledHeight) / 2;
 
-        // ตำแหน่งสุดท้ายบน Canvas
-        const finalXOnCanvas = initialImgXOnCanvas + offsetXOnCanvas;
-        const finalYOnCanvas = initialImgYOnCanvas + offsetYOnCanvas;
-        
-        // 3. วาดภาพผู้ใช้ลงบน finalCanvas ด้วยการปรับขนาดและตำแหน่งที่คำนวณเอง
-        context.drawImage(
-            userImg,
-            0, 0, // Source X, Y (ดึงภาพทั้งหมด)
-            userImg.naturalWidth, userImg.naturalHeight, // Source Width, Height (ขนาดจริงของภาพ)
-            finalXOnCanvas, finalYOnCanvas, // Destination X, Y (ตำแหน่งบน Canvas)
-            finalImgWidthOnCanvas, finalImgHeightOnCanvas // Destination Width, Height (ขนาดบน Canvas)
-        );
+        const xFinal = xInitial + (xOffsetPercent / 100) * FINAL_DOWNLOAD_SIZE;
+        const yFinal = yInitial + (yOffsetPercent / 100) * FINAL_DOWNLOAD_SIZE;
+
+        // 3. วาดภาพผู้ใช้ลงบน finalCanvas
+        context.drawImage(userImg, xFinal, yFinal, scaledWidth, scaledHeight);
 
         // 4. โหลดภาพกรอบ (frameImage)
         const frameImg = new Image();
-        frameImg.crossOrigin = 'Anonymous';
+        frameImg.crossOrigin = 'Anonymous'; // สำคัญสำหรับ CORS
         frameImg.src = currentFrameSrc;
 
         await new Promise((resolve, reject) => {
@@ -575,7 +590,7 @@
         });
 
         // 5. วาดภาพกรอบทับลงไปบน finalCanvas
-        context.drawImage(frameImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+        context.drawImage(frameImg, 0, 0, FINAL_DOWNLOAD_SIZE, FINAL_DOWNLOAD_SIZE);
 
         // --- เสร็จสิ้นการรวมภาพบน Canvas ---
 
@@ -585,7 +600,7 @@
           console.log('Detected mobile device. Showing modal.');
           modalImage.src = imageDataUrl;
           imageModal.classList.remove('hidden');
-          downloadModalBtn.classList.add('hidden'); // ซ่อนปุ่มดาวน์โหลดสำหรับเดสก์ท็อปใน Modal
+          downloadModalBtn.classList.add('hidden'); // Hide desktop download button in modal for mobile
         } else {
           console.log('Detected desktop device. Initiating direct download.');
           const link = document.createElement('a');
@@ -598,9 +613,9 @@
 
       } catch (error) {
         console.error('Error during image processing:', error);
-        alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
+        alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง: ' + error.message);
       } finally {
-        loadingOverlay.classList.add('hidden'); // ซ่อน loading overlay ไม่ว่าจะสำเร็จหรือล้มเหลว
+        loadingOverlay.classList.add('hidden');
       }
     });
 
@@ -609,8 +624,7 @@
         imageModal.classList.add('hidden');
     });
 
-    // Optional: Direct download button inside modal for desktop users (if modal is shown to them)
-    // Or if mobile users want to try direct download (less reliable)
+    // Optional: Direct download button inside modal (if user is on desktop and modal is shown)
     downloadModalBtn.addEventListener('click', () => {
         const imageDataUrl = modalImage.src;
         if (imageDataUrl) {
@@ -621,7 +635,7 @@
             link.click();
             document.body.removeChild(link);
         }
-        imageModal.classList.add('hidden'); // Close modal after attempting download
+        imageModal.classList.add('hidden');
     });
 
     // Initial check for download button state
