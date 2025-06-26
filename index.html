@@ -356,9 +356,9 @@
   <div id="imageModal" class="modal-overlay hidden">
     <div class="modal-content">
       <button class="modal-close-btn" id="closeModalBtn">&times;</button>
-      <h3 class="text-xl font-bold mb-4 text-gray-800">บันทึกรูปภาพโปรไฟล์</h3>
+      <h3 class="text-xl font-bold mb-4 text-gray-800">บันทึกรูปภาพโปรไฟล์ของคุณ</h3>
       <p class="text-gray-700 mb-4">
-        สำหรับมือถือ/แท็บเล็ต ให้กดค้างที่รูปภาพ 2 วินาที แล้วเลือก "บันทึกไปยังแอปรูปภาพ" หรือ **"ดาวน์โหลดรูปภาพ"**
+        **สำหรับมือถือ/แท็บเล็ต:** โปรดกดค้างที่รูปภาพด้านล่าง (Long press) แล้วเลือก **"บันทึกรูปภาพ"** หรือ **"ดาวน์โหลดรูปภาพ"**
       </p>
       <img id="modalImage" src="" alt="Generated Profile Image">
       <button id="downloadModalBtn"
@@ -496,6 +496,7 @@
       const originalAspectRatio = previewContainer.style.aspectRatio;
 
       // บังคับให้ previewContainer มีขนาดเป็น OUTPUT_SIZE x OUTPUT_SIZE พิกเซล ชั่วคราว
+      // นี่เป็นสิ่งสำคัญเพื่อให้ html2canvas จับภาพได้ถูกต้องตามสัดส่วน
       previewContainer.style.width = `${OUTPUT_SIZE}px`;
       previewContainer.style.height = `${OUTPUT_SIZE}px`;
       previewContainer.style.maxWidth = `${OUTPUT_SIZE}px`;
@@ -539,6 +540,7 @@
               }
               if (clonedUserImage) {
                   clonedUserImage.classList.remove('hidden');
+                  // สำคัญ: คัดลอก transform style ไปยัง cloned element ด้วย
                   clonedUserImage.style.transform = userImage.style.transform;
                   clonedUserImage.style.width = '100%';
                   clonedUserImage.style.height = '100%';
@@ -560,8 +562,38 @@
           finalCanvas.height = OUTPUT_SIZE;
           const context = finalCanvas.getContext('2d');
 
-          // วาดภาพที่ได้จาก html2canvas (ซึ่งรวมภาพผู้ใช้และการปรับแต่งแล้ว) ลงบน finalCanvas
-          context.drawImage(canvas, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+          // --- การแก้ไขหลักเพื่อรักษาอัตราส่วนของภาพที่อัปโหลด ---
+          const capturedCanvas = canvas;
+          const capturedWidth = capturedCanvas.width;
+          const capturedHeight = capturedCanvas.height;
+
+          let sourceX = 0;
+          let sourceY = 0;
+          let sourceWidth = capturedWidth;
+          let sourceHeight = capturedHeight;
+          let destX = 0;
+          let destY = 0;
+          let destWidth = OUTPUT_SIZE;
+          let destHeight = OUTPUT_SIZE;
+
+          // คำนวณอัตราส่วนของภาพที่จับมา
+          const capturedRatio = capturedWidth / capturedHeight;
+          const outputRatio = OUTPUT_SIZE / OUTPUT_SIZE; // เท่ากับ 1 (สี่เหลี่ยมจตุรัส)
+
+          if (capturedRatio > outputRatio) {
+            // ภาพที่จับมากว้างกว่าสี่เหลี่ยมจตุรัส: ครอบตัดด้านข้างเพื่อให้พอดี
+            sourceWidth = capturedHeight * outputRatio;
+            sourceX = (capturedWidth - sourceWidth) / 2;
+          } else if (capturedRatio < outputRatio) {
+            // ภาพที่จับมาสูงกว่าสี่เหลี่ยมจตุรัส: ครอบตัดด้านบน/ล่างเพื่อให้พอดี
+            sourceHeight = capturedWidth / outputRatio;
+            sourceY = (capturedHeight - sourceHeight) / 2;
+          }
+
+          // วาดภาพที่จับมาลงบน finalCanvas โดยรักษาอัตราส่วนและอาจมีการครอบตัด
+          context.drawImage(capturedCanvas, sourceX, sourceY, sourceWidth, sourceHeight, destX, destY, destWidth, destHeight);
+          // --- สิ้นสุดการแก้ไขหลัก ---
+
 
           // วาดภาพกรอบทับลงไป
           const frameImg = new Image();
