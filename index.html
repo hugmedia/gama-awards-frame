@@ -480,7 +480,7 @@
     }
 
     // Event listener for download button
-    downloadBtn.addEventListener('click', () => {
+    downloadBtn.addEventListener('click', async () => { // ใช้ async function
       if (!currentImage || !currentFrameSrc) {
         alert('กรุณาอัพโหลดรูปภาพและเลือกกรอบก่อนดาวน์โหลด');
         return;
@@ -489,156 +489,95 @@
       console.log('Download button clicked. Starting processing...');
       loadingOverlay.classList.remove('hidden'); // Show loading overlay
 
-      // เก็บค่า style เดิมของ previewContainer ไว้เพื่อคืนค่าหลังจากการจับภาพ
-      const originalWidth = previewContainer.style.width;
-      const originalHeight = previewContainer.style.height;
-      const originalMaxWidth = previewContainer.style.maxWidth;
-      const originalAspectRatio = previewContainer.style.aspectRatio;
+      // กำหนดขนาดของ Canvas สุดท้าย
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = OUTPUT_SIZE;
+      finalCanvas.height = OUTPUT_SIZE;
+      const context = finalCanvas.getContext('2d');
 
-      // บังคับให้ previewContainer มีขนาดเป็น OUTPUT_SIZE x OUTPUT_SIZE พิกเซล ชั่วคราว
-      // นี่เป็นสิ่งสำคัญเพื่อให้ html2canvas จับภาพได้ถูกต้องตามสัดส่วน
-      previewContainer.style.width = `${OUTPUT_SIZE}px`;
-      previewContainer.style.height = `${OUTPUT_SIZE}px`;
-      previewContainer.style.maxWidth = `${OUTPUT_SIZE}px`;
-      previewContainer.style.aspectRatio = '1 / 1';
-      previewContainer.style.position = 'relative'; // ทำให้แน่ใจว่าการจัดตำแหน่งของ userImage/frameImage ถูกต้อง
+      try {
+        // 1. โหลดภาพที่อัปโหลด (userImage) ด้วย Image object เพื่อเข้าถึงขนาดจริง
+        const userImg = new Image();
+        userImg.crossOrigin = 'Anonymous'; // เพื่อป้องกัน "tainted canvas"
+        userImg.src = currentImage;
 
-      // ตรวจสอบให้แน่ใจว่า userImage และ frameImage ถูกแสดงผลที่ 100% ภายใน previewContainer ชั่วคราว
-      userImage.style.width = '100%';
-      userImage.style.height = '100%';
-      frameImage.style.width = '100%';
-      frameImage.style.height = '100%';
-      frameImage.classList.remove('hidden'); // Ensure frame is visible for capture
-
-      // ใช้ setTimeout เพื่อให้ DOM มีเวลาอัปเดตก่อน html2canvas ทำงาน
-      setTimeout(() => {
-        console.log('html2canvas started.');
-        html2canvas(previewContainer, {
-          backgroundColor: null,
-          useCORS: true,
-          scale: 1, // กำหนด scale เป็น 1 เพราะเรากำหนด width/height ชัดเจนแล้ว
-          logging: true,
-          width: OUTPUT_SIZE, // บอก html2canvas ให้จับภาพด้วยความกว้างนี้
-          height: OUTPUT_SIZE, // บอก html2canvas ให้จับภาพด้วยความสูงนี้
-          onclone: (clonedDoc) => {
-              // ใน cloned DOM ก็ต้องบังคับ style ให้เป็นขนาดเดียวกันด้วย
-              const clonedFrameImage = clonedDoc.getElementById('frameImage');
-              const clonedUserImage = clonedDoc.getElementById('userImage');
-              const clonedPreviewContainer = clonedDoc.getElementById('preview');
-
-              clonedPreviewContainer.style.width = `${OUTPUT_SIZE}px`;
-              clonedPreviewContainer.style.height = `${OUTPUT_SIZE}px`;
-              clonedPreviewContainer.style.maxWidth = `${OUTPUT_SIZE}px`;
-              clonedPreviewContainer.style.aspectRatio = '1 / 1';
-              clonedPreviewContainer.style.position = 'relative';
-
-              if (clonedFrameImage) {
-                  clonedFrameImage.classList.remove('hidden');
-                  clonedFrameImage.src = frameImage.src;
-                  clonedFrameImage.style.width = '100%';
-                  clonedFrameImage.style.height = '100%';
-              }
-              if (clonedUserImage) {
-                  clonedUserImage.classList.remove('hidden');
-                  // สำคัญ: คัดลอก transform style ไปยัง cloned element ด้วย
-                  clonedUserImage.style.transform = userImage.style.transform;
-                  clonedUserImage.style.width = '100%';
-                  clonedUserImage.style.height = '100%';
-              }
-              console.log('html2canvas onclone: DOM cloned with corrected image states and dimensions.');
-          }
-        }).then(canvas => {
-          console.log('html2canvas finished. Canvas generated.');
-
-          // คืนค่า style เดิมของ previewContainer หลังจากการจับภาพเสร็จ
-          previewContainer.style.width = originalWidth;
-          previewContainer.style.height = originalHeight;
-          previewContainer.style.maxWidth = originalMaxWidth;
-          previewContainer.style.aspectRatio = originalAspectRatio;
-
-          const finalCanvas = document.createElement('canvas');
-          // กำหนดขนาดของ canvas สุดท้ายให้เป็น OUTPUT_SIZE เพื่อให้แน่ใจว่าเป็นสี่เหลี่ยมจตุรัสที่สมบูรณ์
-          finalCanvas.width = OUTPUT_SIZE;
-          finalCanvas.height = OUTPUT_SIZE;
-          const context = finalCanvas.getContext('2d');
-
-          // --- การแก้ไขหลักเพื่อรักษาอัตราส่วนของภาพที่อัปโหลด ---
-          const capturedCanvas = canvas;
-          const capturedWidth = capturedCanvas.width;
-          const capturedHeight = capturedCanvas.height;
-
-          let sourceX = 0;
-          let sourceY = 0;
-          let sourceWidth = capturedWidth;
-          let sourceHeight = capturedHeight;
-          let destX = 0;
-          let destY = 0;
-          let destWidth = OUTPUT_SIZE;
-          let destHeight = OUTPUT_SIZE;
-
-          // คำนวณอัตราส่วนของภาพที่จับมา
-          const capturedRatio = capturedWidth / capturedHeight;
-          const outputRatio = OUTPUT_SIZE / OUTPUT_SIZE; // เท่ากับ 1 (สี่เหลี่ยมจตุรัส)
-
-          if (capturedRatio > outputRatio) {
-            // ภาพที่จับมากว้างกว่าสี่เหลี่ยมจตุรัส: ครอบตัดด้านข้างเพื่อให้พอดี
-            sourceWidth = capturedHeight * outputRatio;
-            sourceX = (capturedWidth - sourceWidth) / 2;
-          } else if (capturedRatio < outputRatio) {
-            // ภาพที่จับมาสูงกว่าสี่เหลี่ยมจตุรัส: ครอบตัดด้านบน/ล่างเพื่อให้พอดี
-            sourceHeight = capturedWidth / outputRatio;
-            sourceY = (capturedHeight - sourceHeight) / 2;
-          }
-
-          // วาดภาพที่จับมาลงบน finalCanvas โดยรักษาอัตราส่วนและอาจมีการครอบตัด
-          context.drawImage(capturedCanvas, sourceX, sourceY, sourceWidth, sourceHeight, destX, destY, destWidth, destHeight);
-          // --- สิ้นสุดการแก้ไขหลัก ---
-
-
-          // วาดภาพกรอบทับลงไป
-          const frameImg = new Image();
-          frameImg.crossOrigin = 'Anonymous'; // สำคัญสำหรับภาพที่โหลดจากที่อื่นเพื่อไม่ให้เกิด "tainted canvas"
-          frameImg.src = currentFrameSrc;
-
-          frameImg.onload = () => {
-            console.log('Frame image loaded onto final canvas.');
-            // วาดภาพกรอบ โดยให้ครอบคลุม finalCanvas ทั้งหมด (ซึ่งตอนนี้เป็นสี่เหลี่ยมจตุรัสแล้ว)
-            context.drawImage(frameImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
-
-            const imageDataUrl = finalCanvas.toDataURL('image/png');
-
-            if (isMobileDevice()) {
-              console.log('Detected mobile device. Showing modal.');
-              modalImage.src = imageDataUrl;
-              imageModal.classList.remove('hidden');
-              downloadModalBtn.classList.add('hidden'); // ซ่อนปุ่มดาวน์โหลดสำหรับเดสก์ท็อปใน Modal
-            } else {
-              console.log('Detected desktop device. Initiating direct download.');
-              const link = document.createElement('a');
-              link.download = 'gama-awards-profile.png';
-              link.href = imageDataUrl;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }
-            loadingOverlay.classList.add('hidden'); // ซ่อน loading overlay
-          };
-          frameImg.onerror = () => {
-            console.error('Error loading frame image for final canvas:', currentFrameSrc);
-            alert('ไม่สามารถโหลดกรอบรูปได้ ตรวจสอบชื่อไฟล์หรือพาธของรูปภาพกรอบ');
-            loadingOverlay.classList.add('hidden');
-          };
-        }).catch(error => {
-          console.error('html2canvas error:', error);
-          alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
-          // คืนค่า style เดิมแม้เกิดข้อผิดพลาด
-          previewContainer.style.width = originalWidth;
-          previewContainer.style.height = originalHeight;
-          previewContainer.style.maxWidth = originalMaxWidth;
-          previewContainer.style.aspectRatio = originalAspectRatio;
-          loadingOverlay.classList.add('hidden');
+        await new Promise((resolve, reject) => {
+          userImg.onload = resolve;
+          userImg.onerror = reject;
         });
-      }, 50); // ดีเลย์เล็กน้อยเพื่อให้ DOM มีเวลาอัปเดต
+
+        // 2. คำนวณ transform เพื่อนำมาใช้กับ Canvas
+        // เราจะเอาค่า scale, xPos, yPos จาก slider มาคำนวณตำแหน่งจริงบน Canvas
+        const scale = scaleSlider.value / 100;
+        const xPosPercent = xPosSlider.value;
+        const yPosPercent = yPosSlider.value;
+
+        // คำนวณขนาดภาพผู้ใช้ที่ปรับ scale แล้ว
+        const scaledWidth = userImg.naturalWidth * scale;
+        const scaledHeight = userImg.naturalHeight * scale;
+
+        // คำนวณ offset จาก slider (ค่า xPos, yPos เป็น % ของความกว้าง/สูงของ previewContainer)
+        // previewContainer ที่จับภาพคือ OUTPUT_SIZE x OUTPUT_SIZE
+        const offsetX = (xPosPercent / 100) * OUTPUT_SIZE;
+        const offsetY = (yPosPercent / 100) * OUTPUT_SIZE;
+
+        // ตำแหน่งเริ่มต้นของภาพ (top-left corner) ก่อน transform
+        // เนื่องจาก object-fit: cover; เราต้องคำนวณตำแหน่งเริ่มต้นเพื่อให้ภาพอยู่ตรงกลาง
+        let initialX = (OUTPUT_SIZE - scaledWidth) / 2;
+        let initialY = (OUTPUT_SIZE - scaledHeight) / 2;
+
+        // รวม offset จาก slider
+        const finalX = initialX + offsetX;
+        const finalY = initialY + offsetY;
+
+        // 3. วาดภาพผู้ใช้ลงบน finalCanvas ด้วยการปรับขนาดและตำแหน่งที่คำนวณเอง
+        // ใช้ drawImage แบบมี 9 พารามิเตอร์ เพื่อควบคุม source และ destination
+        context.drawImage(
+            userImg,
+            0, 0, // Source X, Y (ดึงภาพทั้งหมด)
+            userImg.naturalWidth, userImg.naturalHeight, // Source Width, Height (ขนาดจริงของภาพ)
+            finalX, finalY, // Destination X, Y (ตำแหน่งบน Canvas)
+            scaledWidth, scaledHeight // Destination Width, Height (ขนาดบน Canvas)
+        );
+
+        // 4. โหลดภาพกรอบ (frameImage)
+        const frameImg = new Image();
+        frameImg.crossOrigin = 'Anonymous';
+        frameImg.src = currentFrameSrc;
+
+        await new Promise((resolve, reject) => {
+          frameImg.onload = resolve;
+          frameImg.onerror = reject;
+        });
+
+        // 5. วาดภาพกรอบทับลงไปบน finalCanvas
+        context.drawImage(frameImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+
+        // --- เสร็จสิ้นการรวมภาพบน Canvas ---
+
+        const imageDataUrl = finalCanvas.toDataURL('image/png');
+
+        if (isMobileDevice()) {
+          console.log('Detected mobile device. Showing modal.');
+          modalImage.src = imageDataUrl;
+          imageModal.classList.remove('hidden');
+          downloadModalBtn.classList.add('hidden'); // ซ่อนปุ่มดาวน์โหลดสำหรับเดสก์ท็อปใน Modal
+        } else {
+          console.log('Detected desktop device. Initiating direct download.');
+          const link = document.createElement('a');
+          link.download = 'gama-awards-profile.png';
+          link.href = imageDataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+
+      } catch (error) {
+        console.error('Error during image processing:', error);
+        alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
+      } finally {
+        loadingOverlay.classList.add('hidden'); // ซ่อน loading overlay ไม่ว่าจะสำเร็จหรือล้มเหลว
+      }
     });
 
     // Close modal button event
