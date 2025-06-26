@@ -169,7 +169,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 1100;
+      z-index: 1100; /* Higher than loading overlay */
       backdrop-filter: blur(5px);
     }
 
@@ -184,6 +184,10 @@
       text-align: center;
       position: relative;
       animation: fadeInScale 0.3s ease-out;
+      display: flex; /* Use flex for content centering */
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
     .modal-content img {
@@ -192,6 +196,7 @@
       display: block;
       margin: 0 auto;
       border-radius: 8px;
+      cursor: pointer; /* Indicate it's clickable/pressable */
     }
 
     .modal-close-btn {
@@ -384,7 +389,7 @@
     const imageModal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
     const closeModalBtn = document.getElementById('closeModalBtn');
-    const downloadModalBtn = document.getElementById('downloadModalBtn'); // New button in modal
+    const downloadModalBtn = document.getElementById('downloadModalBtn'); 
 
     let currentImage = null;
     let currentFrameSrc = null;
@@ -413,13 +418,13 @@
     imageUpload.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (file) {
+        selectedFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`; // Display file name immediately
         const reader = new FileReader();
         reader.onload = (e) => {
           userImage.src = e.target.result;
           userImage.classList.remove('hidden');
           placeholderText.classList.add('hidden');
           currentImage = userImage.src;
-          selectedFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`;
           // Reset sliders to default on new image upload
           scaleSlider.value = 100;
           xPosSlider.value = 0;
@@ -450,6 +455,7 @@
             currentFrameSrc = frameImgElement.src;
             frameImage.src = currentFrameSrc;
             frameImage.classList.remove('hidden');
+            console.log('Frame selected:', currentFrameSrc); // Debug: Log selected frame
         } else {
             console.error('ไม่พบแท็ก img ภายใน frame-option ที่เลือก');
             currentFrameSrc = null;
@@ -466,7 +472,6 @@
 
     // Function to detect mobile devices
     function isMobileDevice() {
-        // More robust detection including iPad as a mobile device for saving purposes
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     }
 
@@ -477,41 +482,70 @@
         return;
       }
 
+      console.log('Download button clicked. Starting processing...'); // Debug log
       loadingOverlay.classList.remove('hidden'); // Show loading overlay
 
-      // Temporarily hide the frame image to capture only the user image
-      frameImage.classList.add('hidden');
-
+      // Ensure the frame image is visible for html2canvas to capture it correctly on the clone
+      // We will hide it on the original DOM, but html2canvas makes a clone first.
+      frameImage.classList.remove('hidden'); 
+      
+      // Use a timeout to ensure the DOM updates before html2canvas runs
       setTimeout(() => {
+        console.log('html2canvas started.'); // Debug log
         html2canvas(previewContainer, {
           backgroundColor: null,
           useCORS: true,
-          scale: 2 // Higher scale for better resolution
+          scale: 2, // Higher scale for better resolution
+          logging: true, // Enable html2canvas logging
+          // This onclone callback is crucial for capturing the DOM state correctly
+          onclone: (clonedDoc) => {
+              const clonedFrameImage = clonedDoc.getElementById('frameImage');
+              const clonedUserImage = clonedDoc.getElementById('userImage');
+              if (clonedFrameImage) {
+                  // Ensure frame image is visible and has its correct src on the cloned document
+                  clonedFrameImage.classList.remove('hidden'); 
+                  clonedFrameImage.src = frameImage.src; // Ensure src is copied
+              }
+              if (clonedUserImage) {
+                  // Ensure user image is visible and has its correct transform on the cloned document
+                  clonedUserImage.classList.remove('hidden');
+                  clonedUserImage.style.transform = userImage.style.transform; // Ensure transform is copied
+              }
+              console.log('html2canvas onclone: DOM cloned with correct image states.'); // Debug log
+          }
         }).then(canvas => {
-          frameImage.classList.remove('hidden'); // Re-show the frame image
+          console.log('html2canvas finished. Canvas generated.'); // Debug log
+          
+          // Re-show the frame image on the original DOM (if it was hidden for some reason)
+          frameImage.classList.remove('hidden'); 
 
           const finalCanvas = document.createElement('canvas');
           const context = finalCanvas.getContext('2d');
           finalCanvas.width = canvas.width;
           finalCanvas.height = canvas.height;
 
+          // Draw user image (from the captured canvas)
           context.drawImage(canvas, 0, 0);
 
+          // Draw the frame image on top
           const frameImg = new Image();
           frameImg.crossOrigin = 'Anonymous';
           frameImg.src = currentFrameSrc;
+          
           frameImg.onload = () => {
+            console.log('Frame image loaded onto final canvas.'); // Debug log
             context.drawImage(frameImg, 0, 0, finalCanvas.width, finalCanvas.height);
 
             const imageDataUrl = finalCanvas.toDataURL('image/png');
 
             if (isMobileDevice()) {
+              console.log('Detected mobile device. Showing modal.'); // Debug log
               // Show modal with the image for mobile users to long-press
               modalImage.src = imageDataUrl;
               imageModal.classList.remove('hidden');
-              // Hide download button in modal if on mobile, as direct download might not work
-              downloadModalBtn.classList.add('hidden'); 
+              downloadModalBtn.classList.add('hidden'); // Hide desktop download button in modal
             } else {
+              console.log('Detected desktop device. Initiating direct download.'); // Debug log
               // For desktop, use the traditional download link
               const link = document.createElement('a');
               link.download = 'gama-awards-profile.png';
@@ -523,16 +557,17 @@
             loadingOverlay.classList.add('hidden'); // Hide loading overlay
           };
           frameImg.onerror = () => {
+            console.error('Error loading frame image for final canvas:', currentFrameSrc); // Debug log
             alert('ไม่สามารถโหลดกรอบรูปได้ ตรวจสอบชื่อไฟล์หรือพาธของรูปภาพกรอบ');
             loadingOverlay.classList.add('hidden'); // Hide loading overlay
           };
         }).catch(error => {
-          console.error('Oops, something went wrong!', error);
+          console.error('html2canvas error:', error); // Debug: Catch all errors from html2canvas
           alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
           frameImage.classList.remove('hidden');
           loadingOverlay.classList.add('hidden');
         });
-      }, 100);
+      }, 300); // Increased delay to ensure DOM updates
     });
 
     // Close modal button event
