@@ -193,31 +193,31 @@
     <div class="mb-8">
       <h2 class="text-xl font-medium mb-4 text-center text-gray-700">เลือกกรอบรูปภาพ</h2>
       <div class="flex flex-wrap justify-center gap-3">
-        <div class="frame-option rounded-lg p-2 text-center" data-frame="MAA">
+        <div class="frame-option rounded-lg p-2 text-center" data-frame-name="MAA">
           <img src="./MASTER MULTILINE Award.png" alt="MAA" class="w-20 h-20 object-contain mx-auto">
           <p class="text-sm font-medium mt-1 text-gray-800">MAA</p>
         </div>
-        <div class="frame-option rounded-lg p-2 text-center" data-frame="MFA">
+        <div class="frame-option rounded-lg p-2 text-center" data-frame-name="MFA">
           <img src="./MASTER FIRM Award.png" alt="MFA" class="w-20 h-20 object-contain mx-auto">
           <p class="text-sm font-medium mt-1  text-gray-800">MFA</p>
         </div>
-        <div class="frame-option rounded-lg p-2 text-center" data-frame="MMA">
+        <div class="frame-option rounded-lg p-2 text-center" data-frame-name="MMA">
           <img src="./MASTER AGENCY Award.png" alt="MMA" class="w-20 h-20 object-contain mx-auto">
           <p class="text-sm font-medium mt-1 text-gray-800">MMA</p>
         </div>
-        <div class="frame-option rounded-lg p-2 text-center" data-frame="IMA">
+        <div class="frame-option rounded-lg p-2 text-center" data-frame-name="IMA">
           <img src="./International Management Award.png" alt="IMA" class="w-20 h-20 object-contain mx-auto">
           <p class="text-sm font-medium mt-1 text-gray-800">IMA</p>
         </div>
-        <div class="frame-option rounded-lg p-2 text-center" data-frame="FLA">
+        <div class="frame-option rounded-lg p-2 text-center" data-frame-name="FLA">
           <img src="./Frontline Leader Awards.png" alt="FLA" class="w-20 h-20 object-contain mx-auto">
           <p class="text-sm font-medium mt-1 text-gray-800">FLA</p>
         </div>
-        <div class="frame-option rounded-lg p-2 text-center" data-frame="ERA">
+        <div class="frame-option rounded-lg p-2 text-center" data-frame-name="ERA">
           <img src="./Excellence Recruitment Award.png" alt="ERA" class="w-20 h-20 object-contain mx-auto">
           <p class="text-sm font-medium mt-1 text-gray-800">ERA</p>
         </div>
-        <div class="frame-option rounded-lg p-2 text-center" data-frame="COE">
+        <div class="frame-option rounded-lg p-2 text-center" data-frame-name="COE">
           <img src="./Circle of Excellence Award.png" alt="COE" class="w-20 h-20 object-contain mx-auto">
           <p class="text-sm font-medium mt-1 text-gray-800">COE</p>
         </div>
@@ -362,11 +362,18 @@
         // Add 'selected' class to the clicked option
         option.classList.add('selected');
 
-        const frameType = option.dataset.frame;
-        // Assuming frame images are in the same directory as the HTML
-        currentFrameSrc = `./${option.querySelector('img').alt}.png`;
-        frameImage.src = currentFrameSrc;
-        frameImage.classList.remove('hidden');
+        // *** แก้ไขตรงนี้: ดึง src จาก img ภายใน option โดยตรง ***
+        const frameImgElement = option.querySelector('img');
+        if (frameImgElement) {
+            currentFrameSrc = frameImgElement.src;
+            frameImage.src = currentFrameSrc;
+            frameImage.classList.remove('hidden');
+        } else {
+            // Fallback or error handling if img element is not found
+            console.error('ไม่พบแท็ก img ภายใน frame-option ที่เลือก');
+            currentFrameSrc = null;
+            frameImage.classList.add('hidden');
+        }
         checkDownloadButtonState();
       });
     });
@@ -422,7 +429,7 @@
             loadingOverlay.classList.add('hidden'); // Hide loading overlay
           };
           frameImg.onerror = () => {
-            alert('ไม่สามารถโหลดกรอบรูปได้');
+            alert('ไม่สามารถโหลดกรอบรูปได้ ตรวจสอบชื่อไฟล์หรือพาธของรูปภาพกรอบ');
             loadingOverlay.classList.add('hidden'); // Hide loading overlay
           };
         }).catch(error => {
