@@ -362,14 +362,12 @@
         // Add 'selected' class to the clicked option
         option.classList.add('selected');
 
-        // *** แก้ไขตรงนี้: ดึง src จาก img ภายใน option โดยตรง ***
         const frameImgElement = option.querySelector('img');
         if (frameImgElement) {
             currentFrameSrc = frameImgElement.src;
             frameImage.src = currentFrameSrc;
             frameImage.classList.remove('hidden');
         } else {
-            // Fallback or error handling if img element is not found
             console.error('ไม่พบแท็ก img ภายใน frame-option ที่เลือก');
             currentFrameSrc = null;
             frameImage.classList.add('hidden');
@@ -383,6 +381,11 @@
     xPosSlider.addEventListener('input', updateImageTransform);
     yPosSlider.addEventListener('input', updateImageTransform);
 
+    // Function to detect mobile devices
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
     // Event listener for download button
     downloadBtn.addEventListener('click', () => {
       if (!currentImage || !currentFrameSrc) {
@@ -395,37 +398,45 @@
       // Temporarily hide the frame image to capture only the user image
       frameImage.classList.add('hidden');
 
-      // Use a timeout to ensure the DOM updates before html2canvas runs
       setTimeout(() => {
         html2canvas(previewContainer, {
-          backgroundColor: null, // Transparent background
-          useCORS: true, // Important for external images if any
-          scale: 2 // Increase scale for higher resolution output
+          backgroundColor: null,
+          useCORS: true,
+          scale: 2
         }).then(canvas => {
-          // Re-show the frame image
-          frameImage.classList.remove('hidden');
+          frameImage.classList.remove('hidden'); // Re-show the frame image
 
-          // Draw the frame on top of the captured user image canvas
           const finalCanvas = document.createElement('canvas');
           const context = finalCanvas.getContext('2d');
           finalCanvas.width = canvas.width;
           finalCanvas.height = canvas.height;
 
-          // Draw user image (from the captured canvas)
           context.drawImage(canvas, 0, 0);
 
-          // Draw the frame image on top
           const frameImg = new Image();
-          frameImg.crossOrigin = 'Anonymous'; // Handle CORS if frame images are not on the same origin
+          frameImg.crossOrigin = 'Anonymous';
           frameImg.src = currentFrameSrc;
           frameImg.onload = () => {
             context.drawImage(frameImg, 0, 0, finalCanvas.width, finalCanvas.height);
 
-            // Trigger download
-            const link = document.createElement('a');
-            link.download = 'gama-awards-profile.png';
-            link.href = finalCanvas.toDataURL('image/png');
-            link.click();
+            const imageDataUrl = finalCanvas.toDataURL('image/png');
+
+            if (isMobileDevice()) {
+              // For mobile devices, open the image in a new tab
+              // Users can then long-press to save the image
+              const newTab = window.open();
+              newTab.document.body.innerHTML = `<img src="${imageDataUrl}" style="width:100%; height:auto; display:block; margin:0 auto;">`;
+              newTab.document.title = 'รูปโปรไฟล์ GAMA Awards';
+              alert('บนมือถือ/แท็บเล็ต: โปรดกดค้างที่รูปภาพ (Long press) แล้วเลือก "บันทึกรูปภาพ" เพื่อดาวน์โหลด');
+            } else {
+              // For desktop, use the traditional download link
+              const link = document.createElement('a');
+              link.download = 'gama-awards-profile.png';
+              link.href = imageDataUrl;
+              document.body.appendChild(link); // Append to body is good practice
+              link.click();
+              document.body.removeChild(link); // Clean up
+            }
             loadingOverlay.classList.add('hidden'); // Hide loading overlay
           };
           frameImg.onerror = () => {
@@ -438,7 +449,7 @@
           frameImage.classList.remove('hidden'); // Ensure frame is visible again
           loadingOverlay.classList.add('hidden'); // Hide loading overlay
         });
-      }, 100); // Small delay
+      }, 100);
     });
 
     // Initial check for download button state
