@@ -356,9 +356,9 @@
   <div id="imageModal" class="modal-overlay hidden">
     <div class="modal-content">
       <button class="modal-close-btn" id="closeModalBtn">&times;</button>
-      <h3 class="text-xl font-bold mb-4 text-gray-800">บันทึกรูปภาพโปรไฟล์ของคุณ</h3>
+      <h3 class="text-xl font-bold mb-4 text-gray-800">บันทึกรูปภาพโปรไฟล์</h3>
       <p class="text-gray-700 mb-4">
-        **สำหรับมือถือ/แท็บเล็ต:** โปรดกดค้างที่รูปภาพด้านล่าง (Long press) แล้วเลือก **"บันทึกรูปภาพ"** หรือ **"ดาวน์โหลดรูปภาพ"**
+        สำหรับมือถือ/แท็บเล็ต ให้กดค้างที่รูปภาพ 2 วินาที แล้วเลือก "บันทึกไปยังแอปรูปภาพ" หรือ **"ดาวน์โหลดรูปภาพ"**
       </p>
       <img id="modalImage" src="" alt="Generated Profile Image">
       <button id="downloadModalBtn"
@@ -394,9 +394,9 @@
     let currentImage = null;
     let currentFrameSrc = null;
 
-    // Define a target size for the output image to ensure it's always square.
-    // This value determines the resolution of the final output.
-    const OUTPUT_SIZE = 800; // e.g., 800px by 800px
+    // กำหนดขนาดมาตรฐานสำหรับภาพเอาต์พุต (เพื่อให้แน่ใจว่าเป็นสี่เหลี่ยมจตุรัสเสมอ)
+    // ค่านี้จะกำหนดความละเอียดของภาพสุดท้ายด้วย
+    const OUTPUT_SIZE = 800; // สามารถปรับเปลี่ยนได้ เช่น 1000, 1200 เพื่อความละเอียดสูงขึ้น
 
     // Function to update the image transform
     function updateImageTransform() {
@@ -489,41 +489,42 @@
       console.log('Download button clicked. Starting processing...');
       loadingOverlay.classList.remove('hidden'); // Show loading overlay
 
-      // Temporarily override styles for html2canvas to ensure a specific output size
+      // เก็บค่า style เดิมของ previewContainer ไว้เพื่อคืนค่าหลังจากการจับภาพ
       const originalWidth = previewContainer.style.width;
       const originalHeight = previewContainer.style.height;
       const originalMaxWidth = previewContainer.style.maxWidth;
       const originalAspectRatio = previewContainer.style.aspectRatio;
 
+      // บังคับให้ previewContainer มีขนาดเป็น OUTPUT_SIZE x OUTPUT_SIZE พิกเซล ชั่วคราว
       previewContainer.style.width = `${OUTPUT_SIZE}px`;
       previewContainer.style.height = `${OUTPUT_SIZE}px`;
       previewContainer.style.maxWidth = `${OUTPUT_SIZE}px`;
       previewContainer.style.aspectRatio = '1 / 1';
-      previewContainer.style.position = 'relative'; // Ensure positioning context
+      previewContainer.style.position = 'relative'; // ทำให้แน่ใจว่าการจัดตำแหน่งของ userImage/frameImage ถูกต้อง
 
-      // Ensure userImage and frameImage also respect these temporary dimensions
+      // ตรวจสอบให้แน่ใจว่า userImage และ frameImage ถูกแสดงผลที่ 100% ภายใน previewContainer ชั่วคราว
       userImage.style.width = '100%';
       userImage.style.height = '100%';
       frameImage.style.width = '100%';
       frameImage.style.height = '100%';
       frameImage.classList.remove('hidden'); // Ensure frame is visible for capture
 
-      // Use a timeout to ensure the DOM updates before html2canvas runs
+      // ใช้ setTimeout เพื่อให้ DOM มีเวลาอัปเดตก่อน html2canvas ทำงาน
       setTimeout(() => {
         console.log('html2canvas started.');
         html2canvas(previewContainer, {
           backgroundColor: null,
           useCORS: true,
-          scale: 1, // Capture at 1:1 scale of the *rendered* element, then resize
+          scale: 1, // กำหนด scale เป็น 1 เพราะเรากำหนด width/height ชัดเจนแล้ว
           logging: true,
-          width: OUTPUT_SIZE, // Ensure capture width
-          height: OUTPUT_SIZE, // Ensure capture height
+          width: OUTPUT_SIZE, // บอก html2canvas ให้จับภาพด้วยความกว้างนี้
+          height: OUTPUT_SIZE, // บอก html2canvas ให้จับภาพด้วยความสูงนี้
           onclone: (clonedDoc) => {
+              // ใน cloned DOM ก็ต้องบังคับ style ให้เป็นขนาดเดียวกันด้วย
               const clonedFrameImage = clonedDoc.getElementById('frameImage');
               const clonedUserImage = clonedDoc.getElementById('userImage');
               const clonedPreviewContainer = clonedDoc.getElementById('preview');
 
-              // Apply the same fixed dimensions to the cloned elements
               clonedPreviewContainer.style.width = `${OUTPUT_SIZE}px`;
               clonedPreviewContainer.style.height = `${OUTPUT_SIZE}px`;
               clonedPreviewContainer.style.maxWidth = `${OUTPUT_SIZE}px`;
@@ -532,13 +533,13 @@
 
               if (clonedFrameImage) {
                   clonedFrameImage.classList.remove('hidden');
-                  clonedFrameImage.src = frameImage.src; // Ensure src is copied
+                  clonedFrameImage.src = frameImage.src;
                   clonedFrameImage.style.width = '100%';
                   clonedFrameImage.style.height = '100%';
               }
               if (clonedUserImage) {
                   clonedUserImage.classList.remove('hidden');
-                  clonedUserImage.style.transform = userImage.style.transform; // Ensure transform is copied
+                  clonedUserImage.style.transform = userImage.style.transform;
                   clonedUserImage.style.width = '100%';
                   clonedUserImage.style.height = '100%';
               }
@@ -547,31 +548,29 @@
         }).then(canvas => {
           console.log('html2canvas finished. Canvas generated.');
 
-          // Restore original styles of previewContainer after capture
+          // คืนค่า style เดิมของ previewContainer หลังจากการจับภาพเสร็จ
           previewContainer.style.width = originalWidth;
           previewContainer.style.height = originalHeight;
           previewContainer.style.maxWidth = originalMaxWidth;
           previewContainer.style.aspectRatio = originalAspectRatio;
-          // userImage and frameImage styles should revert naturally if their parent's dimensions are restored
 
           const finalCanvas = document.createElement('canvas');
-          // Set final canvas dimensions to desired OUTPUT_SIZE for a perfect square
+          // กำหนดขนาดของ canvas สุดท้ายให้เป็น OUTPUT_SIZE เพื่อให้แน่ใจว่าเป็นสี่เหลี่ยมจตุรัสที่สมบูรณ์
           finalCanvas.width = OUTPUT_SIZE;
           finalCanvas.height = OUTPUT_SIZE;
           const context = finalCanvas.getContext('2d');
 
-          // Draw the captured user image (which now includes scaling/positioning from html2canvas)
-          // Ensure it's drawn to fill the square canvas
+          // วาดภาพที่ได้จาก html2canvas (ซึ่งรวมภาพผู้ใช้และการปรับแต่งแล้ว) ลงบน finalCanvas
           context.drawImage(canvas, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
 
-          // Draw the frame image on top
+          // วาดภาพกรอบทับลงไป
           const frameImg = new Image();
-          frameImg.crossOrigin = 'Anonymous';
+          frameImg.crossOrigin = 'Anonymous'; // สำคัญสำหรับภาพที่โหลดจากที่อื่นเพื่อไม่ให้เกิด "tainted canvas"
           frameImg.src = currentFrameSrc;
 
           frameImg.onload = () => {
             console.log('Frame image loaded onto final canvas.');
-            // Draw the frame, ensuring it also fills the square canvas
+            // วาดภาพกรอบ โดยให้ครอบคลุม finalCanvas ทั้งหมด (ซึ่งตอนนี้เป็นสี่เหลี่ยมจตุรัสแล้ว)
             context.drawImage(frameImg, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
 
             const imageDataUrl = finalCanvas.toDataURL('image/png');
@@ -580,7 +579,7 @@
               console.log('Detected mobile device. Showing modal.');
               modalImage.src = imageDataUrl;
               imageModal.classList.remove('hidden');
-              downloadModalBtn.classList.add('hidden'); // Hide desktop download button in modal
+              downloadModalBtn.classList.add('hidden'); // ซ่อนปุ่มดาวน์โหลดสำหรับเดสก์ท็อปใน Modal
             } else {
               console.log('Detected desktop device. Initiating direct download.');
               const link = document.createElement('a');
@@ -590,7 +589,7 @@
               link.click();
               document.body.removeChild(link);
             }
-            loadingOverlay.classList.add('hidden'); // Hide loading overlay
+            loadingOverlay.classList.add('hidden'); // ซ่อน loading overlay
           };
           frameImg.onerror = () => {
             console.error('Error loading frame image for final canvas:', currentFrameSrc);
@@ -600,14 +599,14 @@
         }).catch(error => {
           console.error('html2canvas error:', error);
           alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
-          // Restore original styles even on error
+          // คืนค่า style เดิมแม้เกิดข้อผิดพลาด
           previewContainer.style.width = originalWidth;
           previewContainer.style.height = originalHeight;
           previewContainer.style.maxWidth = originalMaxWidth;
           previewContainer.style.aspectRatio = originalAspectRatio;
           loadingOverlay.classList.add('hidden');
         });
-      }, 50); // Small delay to allow DOM updates
+      }, 50); // ดีเลย์เล็กน้อยเพื่อให้ DOM มีเวลาอัปเดต
     });
 
     // Close modal button event
@@ -615,7 +614,7 @@
         imageModal.classList.add('hidden');
     });
 
-    // Direct download button inside modal for desktop users (if modal is shown to them)
+    // Optional: Direct download button inside modal for desktop users (if modal is shown to them)
     // Or if mobile users want to try direct download (less reliable)
     downloadModalBtn.addEventListener('click', () => {
         const imageDataUrl = modalImage.src;
