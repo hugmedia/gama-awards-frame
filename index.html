@@ -392,10 +392,14 @@
     let userImageNaturalWidth = 0; // Natural width of the uploaded image
     let userImageNaturalHeight = 0; // Natural height of the uploaded image
 
-    // This defines the actual display width for the preview container in pixels (from CSS max-width)
-    // The downloaded image will have this exact resolution.
-    let PREVIEW_AND_DOWNLOAD_SIZE = 600; 
-    
+    // กำหนดขนาดคงที่สำหรับ Canvas ที่จะใช้สร้างภาพดาวน์โหลด เพื่อความคมชัด
+    // ขนาดนี้ควรใหญ่กว่าขนาดพรีวิว เพื่อให้ได้ภาพที่มีคุณภาพดีขึ้นเมื่อดาวน์โหลด
+    const DOWNLOAD_CANVAS_SIZE = 1200; // เช่น 1200x1200 พิกเซล
+
+    // ค่านี้จะใช้สำหรับแปลงการปรับแต่งของผู้ใช้ (scale, x, y)
+    // จากสเกลของพรีวิว (สูงสุด 600px) ไปยังสเกลของ Canvas ที่จะดาวน์โหลด
+    let PREVIEW_DISPLAY_SIZE = 600; // ค่าเริ่มต้นจาก CSS max-width ของ .image-container
+
     // Function to calculate and apply image transform for preview
     function applyImageTransform() {
       if (!currentImage || userImageNaturalWidth === 0 || userImageNaturalHeight === 0) return;
@@ -404,26 +408,27 @@
       const xOffsetPercent = xPosSlider.value; // Percentage offset for X
       const yOffsetPercent = yPosSlider.value; // Percentage offset for Y
 
-      // 1. Calculate the scaled dimensions of the user image, preserving aspect ratio
+      // 1. คำนวณขนาดที่ปรับ scale สำหรับภาพของผู้ใช้
+      // ความกว้างจะถูกกำหนดตาม slider, ความสูงจะปรับอัตโนมัติเพื่อรักษาสัดส่วน
       const scaledWidth = userImageNaturalWidth * scale;
-      const scaledHeight = userImageNaturalHeight * scale;
+      const scaledHeight = userImageNaturalHeight * scale; // คำนวณเพื่อใช้ในการจัดตำแหน่ง
 
-      // 2. Calculate the initial centered position of the scaled image within the PREVIEW_AND_DOWNLOAD_SIZE area
-      // This is the starting point before applying user offsets.
-      const initialX = (PREVIEW_AND_DOWNLOAD_SIZE - scaledWidth) / 2;
-      const initialY = (PREVIEW_AND_DOWNLOAD_SIZE - scaledHeight) / 2;
+      // 2. คำนวณตำแหน่งเริ่มต้นแบบกึ่งกลางของภาพที่ปรับ scale แล้วในพื้นที่ PREVIEW_DISPLAY_SIZE
+      const initialX = (PREVIEW_DISPLAY_SIZE - scaledWidth) / 2;
+      const initialY = (PREVIEW_DISPLAY_SIZE - scaledHeight) / 2;
 
-      // 3. Calculate the pixel offsets based on the slider percentages and PREVIEW_AND_DOWNLOAD_SIZE
-      const offsetX = (xOffsetPercent / 100) * PREVIEW_AND_DOWNLOAD_SIZE;
-      const offsetY = (yOffsetPercent / 100) * PREVIEW_AND_DOWNLOAD_SIZE;
+      // 3. คำนวณค่า offset ที่ได้จาก slider เป็น pixel เทียบกับ PREVIEW_DISPLAY_SIZE
+      const offsetX = (xOffsetPercent / 100) * PREVIEW_DISPLAY_SIZE;
+      const offsetY = (yOffsetPercent / 100) * PREVIEW_DISPLAY_SIZE;
 
-      // 4. Calculate the final absolute position for the user image
+      // 4. คำนวณตำแหน่งสุดท้ายสำหรับภาพของผู้ใช้ในพรีวิว
       const finalX = initialX + offsetX;
       const finalY = initialY + offsetY;
 
-      // Apply these calculated styles directly to the userImage element for preview
+      // ใช้ค่าที่คำนวณได้กับ userImage element สำหรับการพรีวิว
+      // สำคัญ: กำหนดแค่ width, ให้ height เป็น 'auto' เพื่อรักษาสัดส่วน
       userImage.style.width = `${scaledWidth}px`;
-      userImage.style.height = `${scaledHeight}px`;
+      userImage.style.height = 'auto'; // แก้ไข: ให้เบราว์เซอร์จัดการความสูงเพื่อรักษาสัดส่วน
       userImage.style.left = `${finalX}px`;
       userImage.style.top = `${finalY}px`;
     }
@@ -453,10 +458,9 @@
             placeholderText.classList.add('hidden'); // Hide placeholder text
             currentImage = e.target.result; // Store the base64 string
 
-            // Update PREVIEW_AND_DOWNLOAD_SIZE based on the actual rendered size of the preview container
-            // This is crucial to ensure downloaded image matches the preview's actual resolution on screen
-            // We read clientWidth here because the CSS max-width might make it smaller on mobile
-            PREVIEW_AND_DOWNLOAD_SIZE = previewContainer.clientWidth;
+            // อัปเดต PREVIEW_DISPLAY_SIZE ตามขนาดจริงของ container ในหน้าจอ
+            // เพื่อให้การคำนวณตำแหน่งและขนาดใน applyImageTransform สอดคล้องกับการแสดงผล
+            PREVIEW_DISPLAY_SIZE = previewContainer.clientWidth;
             
             // Reset sliders to default values (100% scale, 0 offset)
             scaleSlider.value = 100;
@@ -522,10 +526,10 @@
       console.log('Download button clicked. Starting processing...');
       loadingOverlay.classList.remove('hidden');
 
-      // Create a canvas for final output. Its size MUST match the preview container's effective size.
+      // Create a canvas for final output. Its size is fixed for high quality.
       const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = PREVIEW_AND_DOWNLOAD_SIZE;
-      finalCanvas.height = PREVIEW_AND_DOWNLOAD_SIZE;
+      finalCanvas.width = DOWNLOAD_CANVAS_SIZE;
+      finalCanvas.height = DOWNLOAD_CANVAS_SIZE;
       const context = finalCanvas.getContext('2d');
 
       try {
@@ -539,26 +543,41 @@
           userImg.onerror = reject;
         });
 
-        // 2. Calculate user image dimensions and position for drawing on the canvas
-        // This logic is IDENTICAL to applyImageTransform() to ensure 100% match
+        // 2. Calculate user image dimensions and position for drawing on the DOWNLOAD_CANVAS_SIZE area
+        // ต้องแปลงค่า scale และ offset จาก PREVIEW_DISPLAY_SIZE ไปยัง DOWNLOAD_CANVAS_SIZE
         const scale = scaleSlider.value / 100;
         const xOffsetPercent = xPosSlider.value;
         const yOffsetPercent = yPosSlider.value;
 
-        const scaledWidth = userImageNaturalWidth * scale;
-        const scaledHeight = userImageNaturalHeight * scale;
+        // คำนวณขนาดภาพผู้ใช้ที่ scale เทียบกับขนาดต้นฉบับ
+        const originalScaledWidth = userImageNaturalWidth * scale;
+        const originalScaledHeight = userImageNaturalHeight * scale;
 
-        const initialX = (PREVIEW_AND_DOWNLOAD_SIZE - scaledWidth) / 2;
-        const initialY = (PREVIEW_AND_DOWNLOAD_SIZE - scaledHeight) / 2;
+        // คำนวณอัตราส่วนการขยายจาก PREVIEW_DISPLAY_SIZE ไปยัง DOWNLOAD_CANVAS_SIZE
+        const scaleFactorForCanvas = DOWNLOAD_CANVAS_SIZE / PREVIEW_DISPLAY_SIZE;
 
-        const offsetX = (xOffsetPercent / 100) * PREVIEW_AND_DOWNLOAD_SIZE;
-        const offsetY = (yOffsetPercent / 100) * PREVIEW_AND_DOWNLOAD_SIZE;
+        // ขนาดภาพผู้ใช้บน Canvas ที่จะถูกวาด
+        const drawWidthOnCanvas = originalScaledWidth * scaleFactorForCanvas;
+        const drawHeightOnCanvas = originalScaledHeight * scaleFactorForCanvas;
 
-        const finalXOnCanvas = initialX + offsetX;
-        const finalYOnCanvas = initialY + offsetY;
+        // คำนวณตำแหน่งเริ่มต้นแบบกึ่งกลางของภาพที่ scale แล้วในพื้นที่ PREVIEW_DISPLAY_SIZE
+        const initialXOnPreview = (PREVIEW_DISPLAY_SIZE - originalScaledWidth) / 2;
+        const initialYOnPreview = (PREVIEW_DISPLAY_SIZE - originalScaledHeight) / 2;
+
+        // คำนวณค่า offset ที่ได้จาก slider เป็น pixel เทียบกับ PREVIEW_DISPLAY_SIZE
+        const offsetXOnPreview = (xOffsetPercent / 100) * PREVIEW_DISPLAY_SIZE;
+        const offsetYOnPreview = (yOffsetPercent / 100) * PREVIEW_DISPLAY_SIZE;
+
+        // คำนวณตำแหน่งสุดท้ายบนพรีวิว
+        const finalXOnPreview = initialXOnPreview + offsetXOnPreview;
+        const finalYOnPreview = initialYOnPreview + offsetYOnPreview;
+
+        // แปลงตำแหน่งสุดท้ายจากพรีวิวไปยังตำแหน่งบน Canvas ที่มีขนาดใหญ่กว่า
+        const finalXOnCanvas = finalXOnPreview * scaleFactorForCanvas;
+        const finalYOnCanvas = finalYOnPreview * scaleFactorForCanvas;
 
         // 3. Draw the user's image onto the final canvas
-        context.drawImage(userImg, finalXOnCanvas, finalYOnCanvas, scaledWidth, scaledHeight);
+        context.drawImage(userImg, finalXOnCanvas, finalYOnCanvas, drawWidthOnCanvas, drawHeightOnCanvas);
 
         // 4. Load the frame image
         const frameImg = new Image();
@@ -571,12 +590,12 @@
         });
 
         // 5. Draw the frame image over the user's image on the final canvas
-        // It should cover the entire canvas, so its size is PREVIEW_AND_DOWNLOAD_SIZE
-        context.drawImage(frameImg, 0, 0, PREVIEW_AND_DOWNLOAD_SIZE, PREVIEW_AND_DOWNLOAD_SIZE);
+        // It should cover the entire canvas, so its size is DOWNLOAD_CANVAS_SIZE
+        context.drawImage(frameImg, 0, 0, DOWNLOAD_CANVAS_SIZE, DOWNLOAD_CANVAS_SIZE);
 
         // --- Image combination on Canvas complete ---
 
-        const imageDataUrl = finalCanvas.toDataURL('image/png'); // Get image as data URL
+        const imageDataUrl = finalCanvas.toDataURL('image/png', 0.95); // Get image as data URL, 0.95 quality for PNG
 
         if (isMobileDevice()) {
           console.log('Detected mobile device. Showing modal.');
@@ -623,6 +642,19 @@
 
     // Initial check for download button state when page loads
     checkDownloadButtonState();
+
+    // Ensure PREVIEW_DISPLAY_SIZE is correctly initialized on load
+    window.addEventListener('load', () => {
+        PREVIEW_DISPLAY_SIZE = previewContainer.clientWidth;
+        // Optionally, call applyImageTransform() here if an image might be pre-loaded or for initial correct positioning
+        // applyImageTransform(); 
+    });
+
+    // Also update PREVIEW_DISPLAY_SIZE on window resize, in case the preview container's size changes
+    window.addEventListener('resize', () => {
+        PREVIEW_DISPLAY_SIZE = previewContainer.clientWidth;
+        applyImageTransform(); // Re-apply transforms to ensure preview remains accurate
+    });
   </script>
 </body>
 </html>
